@@ -5907,12 +5907,10 @@ elif page == "Pitcher Scouting" or page == "Pitcher vs Team":
                             Giving up hard contact — monitor closely.</div>
                         </div>""", unsafe_allow_html=True)
 
-        tab1, tab2 = st.tabs(["NAS_SIL — Our Pitchers", "League — Opponent Pitchers"])
-
         met_tab1, met_tab2 = st.tabs(["Brookhaven Bandits", "Opponents"])
 
         with met_tab1:
-            render_pitcher_table(df_all[df_all["PitcherTeam"] == MY_TEAM], "NAS_SIL")
+            render_pitcher_table(df_all[df_all["PitcherTeam"] == MY_TEAM], "Brookhaven Bandits")
 
         with met_tab2:
             opp_teams_p = sorted([t for t in _team_options(df_all["PitcherTeam"]) if t != MY_TEAM])
@@ -7637,7 +7635,7 @@ elif page == "Pitch Run Values":
 
 elif page == "Catcher Report":
     st.title("Catcher Report — Pitcher Breakdown by Catcher")
-    st.caption("How each NAS_SIL pitcher performs when paired with each catcher. "
+    st.caption("How each Brookhaven pitcher performs when paired with each catcher. "
                "Strike%, Whiff%, and pitch mix by pitcher-catcher combination.")
     st.divider()
 
