@@ -403,35 +403,7 @@ hr{ border-color:var(--rule) !important; margin:1.15rem 0 !important; }
 """
 st.markdown(_THEME_CSS, unsafe_allow_html=True)
 
-# 
-#  PASSWORD GATE
-# 
-def check_password():
-    if "authenticated" in st.session_state and st.session_state.authenticated:
-        return True
-    st.markdown("""
-        <div style='text-align:center; padding: 4rem 0 1rem 0;'>
-            <h1 style='font-size:2.5rem;'>DiamondIntel</h1>
-            <p style='color:#64748b; font-size:1rem;'>Brookhaven Bandits · Coaching Staff</p>
-        </div>
-    """, unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        pw = st.text_input("Password", type="password", placeholder="Enter access code")
-        if st.button("Sign In", use_container_width=True):
-            import os
-            correct = os.environ.get("APP_PASSWORD", "NSKnights")
-            if pw == correct:
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("Incorrect password.")
-    return False
-
-if not check_password():
-    st.stop()
-
-# 
+#
 #  DATA LOADING
 # 
 
