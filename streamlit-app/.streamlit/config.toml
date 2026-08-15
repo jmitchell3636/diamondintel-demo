@@ -1,0 +1,11 @@
+# DiamondIntel theme
+[theme]
+base                = "light"
+primaryColor        = "#C8102E"   # Knights red — active nav, focus, accents
+backgroundColor     = "#FFFFFF"   # white
+secondaryBackgroundColor = "#F1F5F9"   # panel — sidebar, cards, table headers
+textColor           = "#0F172A"   # body text
+font                = "sans serif"
+
+[server]
+maxUploadSize = 400
