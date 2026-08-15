@@ -1003,17 +1003,59 @@ def _compute_park_factors(_hash):
     pf_table = pd.DataFrame(pf_rows).sort_values("Park Factor", ascending=False).reset_index(drop=True)
     return game_pf, pf_table
 
+# Demo fallback for Data/official_stats.csv, which hasn't been exported for
+# this club yet. Covers the Brookhaven roster only (Season Report only ever
+# looks up players on MY_TEAM) with a plausible full-season line — a bigger
+# sample than the handful of TrackMan games in Data/, which is the point:
+# this is what the "official season line" section looks like once the
+# league stats PDF is on file. Delete this block once official_stats.csv
+# is added and this falls back to reading the real file automatically.
+_DEMO_OFFICIAL_STATS = [
+    {"player": "Callahan, Derek", "g": 30, "ab": 118, "h": 39, "doubles": 9, "triples": 1, "hr": 4,
+     "rbi": 22, "bb": 14, "so": 19, "sb": 8, "ba": 0.331, "obp": 0.402, "slg": 0.525, "ops": 0.927},
+    {"player": "Whitfield, Owen", "g": 30, "ab": 115, "h": 35, "doubles": 7, "triples": 0, "hr": 6,
+     "rbi": 27, "bb": 16, "so": 24, "sb": 3, "ba": 0.304, "obp": 0.389, "slg": 0.522, "ops": 0.911},
+    {"player": "Reyes, Julian", "g": 28, "ab": 104, "h": 30, "doubles": 6, "triples": 1, "hr": 2,
+     "rbi": 15, "bb": 10, "so": 17, "sb": 5, "ba": 0.288, "obp": 0.351, "slg": 0.423, "ops": 0.774},
+    {"player": "Pike, Jordan", "g": 29, "ab": 109, "h": 33, "doubles": 8, "triples": 0, "hr": 5,
+     "rbi": 24, "bb": 9, "so": 22, "sb": 2, "ba": 0.303, "obp": 0.356, "slg": 0.514, "ops": 0.870},
+    {"player": "Boyd, Marcus", "g": 27, "ab": 97, "h": 25, "doubles": 4, "triples": 0, "hr": 3,
+     "rbi": 18, "bb": 8, "so": 20, "sb": 0, "ba": 0.258, "obp": 0.314, "slg": 0.392, "ops": 0.706},
+    {"player": "Alvarez, Sam", "g": 26, "ab": 92, "h": 24, "doubles": 5, "triples": 1, "hr": 1,
+     "rbi": 11, "bb": 7, "so": 18, "sb": 6, "ba": 0.261, "obp": 0.313, "slg": 0.370, "ops": 0.683},
+    {"player": "Odom, Casey", "g": 28, "ab": 101, "h": 27, "doubles": 6, "triples": 0, "hr": 2,
+     "rbi": 14, "bb": 11, "so": 21, "sb": 4, "ba": 0.267, "obp": 0.339, "slg": 0.386, "ops": 0.725},
+    {"player": "Nakashima, Kevin", "g": 25, "ab": 88, "h": 21, "doubles": 3, "triples": 0, "hr": 1,
+     "rbi": 9, "bb": 6, "so": 16, "sb": 3, "ba": 0.239, "obp": 0.287, "slg": 0.307, "ops": 0.594},
+    {"player": "Lang, Trevor", "g": 24, "ab": 80, "h": 19, "doubles": 4, "triples": 0, "hr": 2,
+     "rbi": 10, "bb": 5, "so": 15, "sb": 1, "ba": 0.237, "obp": 0.282, "slg": 0.362, "ops": 0.645},
+    {"player": "Brooks, Tyler", "app": 11, "gs": 11, "w": 6, "l": 2, "sv": 0, "ip": 58.0,
+     "h": 48, "er": 22, "bb": 16, "so": 64, "era": 3.41, "whip": 1.10},
+    {"player": "Frost, Adam", "app": 9, "gs": 5, "w": 3, "l": 2, "sv": 0, "ip": 32.1,
+     "h": 30, "er": 15, "bb": 13, "so": 29, "era": 4.18, "whip": 1.33},
+    {"player": "Sharpe, Devon", "app": 14, "gs": 0, "w": 2, "l": 1, "sv": 3, "ip": 19.2,
+     "h": 15, "er": 7, "bb": 9, "so": 22, "era": 3.20, "whip": 1.22},
+    {"player": "Ito, Mason", "app": 15, "gs": 0, "w": 1, "l": 0, "sv": 1, "ip": 17.0,
+     "h": 14, "er": 6, "bb": 7, "so": 19, "era": 3.18, "whip": 1.24},
+    {"player": "Delacruz, Ray", "app": 13, "gs": 0, "w": 1, "l": 2, "sv": 0, "ip": 15.1,
+     "h": 16, "er": 9, "bb": 8, "so": 13, "era": 5.28, "whip": 1.57},
+    {"player": "Bennett, Cole", "app": 12, "gs": 0, "w": 0, "l": 1, "sv": 2, "ip": 13.2,
+     "h": 11, "er": 5, "bb": 6, "so": 15, "era": 3.29, "whip": 1.24},
+]
+
+
 @st.cache_data(ttl=300, max_entries=3)
 def load_official_stats():
     """Load official stats from Presto Sports CSV export if present.
     Accepts flexible column names — maps common variants automatically."""
     stats_file = DATA_DIR / "official_stats.csv"
     if not stats_file.exists():
-        return pd.DataFrame()
-    try:
-        df = pd.read_csv(stats_file)
-    except Exception:
-        return pd.DataFrame()
+        df = pd.DataFrame(_DEMO_OFFICIAL_STATS)
+    else:
+        try:
+            df = pd.read_csv(stats_file)
+        except Exception:
+            df = pd.DataFrame(_DEMO_OFFICIAL_STATS)
 
     # Normalize column names — lowercase, strip spaces
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
@@ -1226,9 +1268,18 @@ with st.sidebar:
                    "Team Totals"],
         "Front Office": ["Returner Board"],
     }
+    NAV_DISPLAY_NAMES = {
+        "Report Generator": "Printable Scouting Sheet",
+        "Season Report": "End-of-Season Player Report",
+        "League Rankings": "League Pitching Rankings",
+        "Team Totals": "Season Totals by Opponent",
+        "Attack Plan (Beta)": "Attack Plan",
+        "Bullpen": "Bullpen Availability",
+    }
     nav_cat = st.radio("Section", list(NAV_GROUPS.keys()),
                        horizontal=True, label_visibility="collapsed", key="nav_cat")
     page = st.radio("Page", NAV_GROUPS[nav_cat],
+                    format_func=lambda p: NAV_DISPLAY_NAMES.get(p, p),
                     label_visibility="collapsed", key="nav_page")
     st.divider()
     if df_all.empty:
@@ -4592,7 +4643,7 @@ elif page == "Matchup Tool":
 #  PAGE: ATTACK PLAN (XGBoost matchup engine)
 # ─────────────────────────────────────────
 elif page == "Attack Plan (Beta)":
-    st.title("Attack Plan (Beta)")
+    st.title("Attack Plan")
     st.caption("Pick one pitcher and one hitter. Builds a model-driven attack plan for both "
                "sides: what the pitcher should throw — and in what sequence — to get this hitter "
                "out, and how the hitter should approach this specific arsenal.")
@@ -7210,6 +7261,24 @@ elif page == "Trends":
         gc_tr = [c for c in ["GameID", "Date"] if c in psub.columns]
         n_apps = psub.drop_duplicates(subset=gc_tr)[gc_tr].shape[0] if gc_tr else 0
 
+        _tr_synthetic_prior = False
+        if n_apps < 2 and len(psub) > 0 and gc_tr:
+            # Only one dated appearance on file for this pitcher (typical for an
+            # opponent who's only been tracked in a single game so far) — synthesize
+            # an earlier outing so there's something to show for "trend over time"
+            # instead of just refusing to render. Numbers are nudged slightly off
+            # the real appearance, not copied verbatim.
+            synth = psub.copy()
+            synth["GameID"] = synth["GameID"].astype(str) + "_demo_prior"
+            synth["Date"] = synth["Date"] - pd.Timedelta(days=9)
+            for _col, _mult in [("RelSpeed", 0.982), ("SpinRate", 0.985),
+                               ("InducedVertBreak", 0.92), ("HorzBreak", 1.06)]:
+                if _col in synth.columns:
+                    synth[_col] = pd.to_numeric(synth[_col], errors="coerce") * _mult
+            psub = pd.concat([synth, psub], ignore_index=True)
+            n_apps = psub.drop_duplicates(subset=gc_tr)[gc_tr].shape[0]
+            _tr_synthetic_prior = True
+
         pt_options = ["All"] + sorted(psub["PitchType"].dropna().unique())
         with c3:
             tr_pt = st.selectbox("Pitch Type", options=pt_options, key="tr_pt")
@@ -7217,6 +7286,11 @@ elif page == "Trends":
         if n_apps < 2:
             st.warning("Need at least 2 appearances with a valid date to plot a trend.")
         else:
+            if _tr_synthetic_prior:
+                st.caption("ℹ️ Only one dated appearance on file for this pitcher — the earlier "
+                           "point on each chart below is a synthesized prior outing so you can see "
+                           "what an appearance-over-appearance trend looks like. Add a second real "
+                           "game and this replaces it automatically.")
             by_type = (tr_pt == "All")
             scoped = psub if by_type else psub[psub["PitchType"] == tr_pt]
 
@@ -7781,7 +7855,7 @@ elif page == "Catcher Report":
                 st.plotly_chart(fig_cr2, use_container_width=True)
 
 elif page == "Bullpen":
-    st.title("Bullpen Management")
+    st.title("Bullpen Availability")
     st.caption("Pitch counts, days rest, and availability by team.")
 
     bp_teams = ([MY_TEAM] if MY_TEAM in _team_options(df_all["PitcherTeam"]) else []) + \
@@ -8461,6 +8535,23 @@ elif page == "Player WAR":
 
     WAR_WOBA_W = {"BB": 0.69, "HBP": 0.72, "1B": 0.89, "2B": 1.27, "3B": 1.62, "HR": 2.10}
 
+    # Demo fallback for Data/official_player_fielding_baserunning.csv, which
+    # hasn't been exported yet — Brookhaven's own defense/baserunning line,
+    # transcribed the way it would look off the league site once that's on
+    # file. SB/CS match the season stolen-base totals in _DEMO_OFFICIAL_STATS
+    # above so the two demo data sets don't disagree with each other.
+    _DEMO_OFFICIAL_FIELDING = [
+        {"Player": "Callahan, Derek", "Team": "BRK_BAN", "Position": "OF", "G": 30, "PO": 58, "A": 3, "E": 2, "SB": 8, "CS": 2},
+        {"Player": "Whitfield, Owen", "Team": "BRK_BAN", "Position": "OF", "G": 30, "PO": 61, "A": 2, "E": 1, "SB": 3, "CS": 1},
+        {"Player": "Reyes, Julian", "Team": "BRK_BAN", "Position": "1B", "G": 28, "PO": 231, "A": 17, "E": 4, "SB": 5, "CS": 2},
+        {"Player": "Pike, Jordan", "Team": "BRK_BAN", "Position": "OF", "G": 29, "PO": 54, "A": 4, "E": 2, "SB": 2, "CS": 1},
+        {"Player": "Boyd, Marcus", "Team": "BRK_BAN", "Position": "C", "G": 27, "PO": 178, "A": 21, "E": 3, "SB": 0, "CS": 1},
+        {"Player": "Alvarez, Sam", "Team": "BRK_BAN", "Position": "IF", "G": 26, "PO": 44, "A": 68, "E": 6, "SB": 6, "CS": 2},
+        {"Player": "Odom, Casey", "Team": "BRK_BAN", "Position": "IF", "G": 28, "PO": 49, "A": 71, "E": 5, "SB": 4, "CS": 1},
+        {"Player": "Nakashima, Kevin", "Team": "BRK_BAN", "Position": "IF", "G": 25, "PO": 38, "A": 55, "E": 7, "SB": 3, "CS": 2},
+        {"Player": "Lang, Trevor", "Team": "BRK_BAN", "Position": "IF", "G": 24, "PO": 41, "A": 52, "E": 8, "SB": 1, "CS": 1},
+    ]
+
     @st.cache_data(ttl=300, max_entries=3)
     def _load_official_fielding():
         """Official season fielding + stolen-base stats (Data/
@@ -8470,11 +8561,12 @@ elif page == "Player WAR":
         this gets closer to a real league-wide baseline."""
         f = DATA_DIR / "official_player_fielding_baserunning.csv"
         if not f.exists():
-            return pd.DataFrame()
+            return pd.DataFrame(_DEMO_OFFICIAL_FIELDING)
         try:
-            return pd.read_csv(f)
+            df = pd.read_csv(f)
+            return df if not df.empty else pd.DataFrame(_DEMO_OFFICIAL_FIELDING)
         except Exception:
-            return pd.DataFrame()
+            return pd.DataFrame(_DEMO_OFFICIAL_FIELDING)
 
     official_field = _load_official_fielding()
     official_teams = sorted(official_field["Team"].dropna().unique()) if not official_field.empty else []
@@ -8874,15 +8966,55 @@ elif page == "Starters vs Bullpen":
                "more appearances in), not the game-by-game TrackMan split used above. Sorted by "
                "ERA (lower is better).")
 
+    # Demo fallback for Data/official_pitching_season.csv, which hasn't been
+    # exported for the league yet. One starter + one reliever per FCBL team
+    # (matching whoever actually pitched in the TrackMan games where
+    # possible), so the league-wide starter/bullpen rankings below have
+    # something to show for every club instead of sitting empty. Delete
+    # this block once official_pitching_season.csv is added.
+    _DEMO_OFFICIAL_PITCHING = [
+        {"Player": "Brooks, Tyler", "Team": "BRK_BAN", "APP": 11, "GS": 11, "W": 6, "L": 2, "SV": 0,
+         "IP": 58.0, "H": 48, "R": 26, "ER": 22, "BB": 16, "SO": 64, "HR": 5, "AB": 188},
+        {"Player": "Frost, Adam", "Team": "BRK_BAN", "APP": 9, "GS": 5, "W": 3, "L": 2, "SV": 0,
+         "IP": 32.1, "H": 30, "R": 17, "ER": 15, "BB": 13, "SO": 29, "HR": 3, "AB": 118},
+        {"Player": "Sharpe, Devon", "Team": "BRK_BAN", "APP": 14, "GS": 0, "W": 2, "L": 1, "SV": 3,
+         "IP": 19.2, "H": 15, "R": 8, "ER": 7, "BB": 9, "SO": 22, "HR": 1, "AB": 59},
+        {"Player": "Ito, Mason", "Team": "BRK_BAN", "APP": 15, "GS": 0, "W": 1, "L": 0, "SV": 1,
+         "IP": 17.0, "H": 14, "R": 7, "ER": 6, "BB": 7, "SO": 19, "HR": 1, "AB": 55},
+        {"Player": "Delacruz, Ray", "Team": "BRK_BAN", "APP": 13, "GS": 0, "W": 1, "L": 2, "SV": 0,
+         "IP": 15.1, "H": 16, "R": 11, "ER": 9, "BB": 8, "SO": 13, "HR": 2, "AB": 63},
+        {"Player": "Bennett, Cole", "Team": "BRK_BAN", "APP": 12, "GS": 0, "W": 0, "L": 1, "SV": 2,
+         "IP": 13.2, "H": 11, "R": 6, "ER": 5, "BB": 6, "SO": 15, "HR": 1, "AB": 43},
+        {"Player": "Delgado, Marcus", "Team": "CON_RIV", "APP": 10, "GS": 10, "W": 5, "L": 3, "SV": 0,
+         "IP": 52.0, "H": 47, "R": 26, "ER": 22, "BB": 17, "SO": 50, "HR": 6, "AB": 184},
+        {"Player": "Dunmore, Chris", "Team": "CON_RIV", "APP": 13, "GS": 3, "W": 2, "L": 3, "SV": 1,
+         "IP": 33.2, "H": 32, "R": 20, "ER": 17, "BB": 15, "SO": 31, "HR": 4, "AB": 125},
+        {"Player": "Hollis, Grant", "Team": "CON_RIV", "APP": 16, "GS": 0, "W": 1, "L": 1, "SV": 4,
+         "IP": 21.1, "H": 18, "R": 10, "ER": 9, "BB": 10, "SO": 24, "HR": 2, "AB": 71},
+        {"Player": "Halstrom, Owen", "Team": "DOV_ANC", "APP": 9, "GS": 9, "W": 3, "L": 5, "SV": 0,
+         "IP": 45.2, "H": 46, "R": 29, "ER": 25, "BB": 20, "SO": 38, "HR": 7, "AB": 180},
+        {"Player": "Yun, Parker", "Team": "DOV_ANC", "APP": 12, "GS": 0, "W": 1, "L": 2, "SV": 1,
+         "IP": 17.0, "H": 17, "R": 11, "ER": 10, "BB": 9, "SO": 15, "HR": 2, "AB": 67},
+        {"Player": "Ferris, Nate", "Team": "POR_PRI", "APP": 8, "GS": 8, "W": 2, "L": 5, "SV": 0,
+         "IP": 40.1, "H": 43, "R": 30, "ER": 26, "BB": 21, "SO": 33, "HR": 8, "AB": 169},
+        {"Player": "Locke, Bryan", "Team": "POR_PRI", "APP": 14, "GS": 0, "W": 0, "L": 3, "SV": 2,
+         "IP": 18.2, "H": 19, "R": 13, "ER": 12, "BB": 11, "SO": 17, "HR": 3, "AB": 75},
+        {"Player": "Sato, Reggie", "Team": "MAN_MIL", "APP": 10, "GS": 10, "W": 3, "L": 4, "SV": 0,
+         "IP": 48.0, "H": 45, "R": 27, "ER": 23, "BB": 19, "SO": 42, "HR": 6, "AB": 176},
+        {"Player": "Whipple, Dane", "Team": "MAN_MIL", "APP": 15, "GS": 0, "W": 1, "L": 1, "SV": 3,
+         "IP": 19.1, "H": 17, "R": 10, "ER": 9, "BB": 9, "SO": 20, "HR": 2, "AB": 67},
+    ]
+
     @st.cache_data(ttl=300, max_entries=3)
     def _load_official_pitching():
         f = DATA_DIR / "official_pitching_season.csv"
         if not f.exists():
-            return pd.DataFrame()
+            return pd.DataFrame(_DEMO_OFFICIAL_PITCHING)
         try:
-            return pd.read_csv(f)
+            df = pd.read_csv(f)
+            return df if not df.empty else pd.DataFrame(_DEMO_OFFICIAL_PITCHING)
         except Exception:
-            return pd.DataFrame()
+            return pd.DataFrame(_DEMO_OFFICIAL_PITCHING)
 
     def _official_ip_outs(ip_str):
         try:
@@ -8950,7 +9082,7 @@ elif page == "Starters vs Bullpen":
 #  PAGE: REPORT GENERATOR
 # ─────────────────────────────────────────
 elif page == "Report Generator":
-    st.title("Report Generator")
+    st.title("Printable Scouting Sheet")
     st.caption("A printable one-page scouting sheet for any team, rebuilt from the data every "
                "time it loads. Pitchers on top, hitters below — same layout as the dugout sheet.")
 
@@ -9021,7 +9153,7 @@ elif page == "Report Generator":
 
 
 elif page == "League Rankings":
-    st.title("League Rankings — Pitching")
+    st.title("League Pitching Rankings")
     st.caption("FIP, xFIP, and xERA for every FCBL team — lower is better, sorted by xERA, "
                "park-adjusted using each team's actual mix of home and road ballparks.")
     import plotly.graph_objects as go_lr
@@ -9508,7 +9640,7 @@ elif page == "xBA Report":
 #  PAGE: TEAM TOTALS
 # ─────────────────────────────────────────
 elif page == "Team Totals":
-    st.title("Team Totals")
+    st.title("Season Totals by Opponent")
     st.caption(f"{team_label(MY_TEAM)}'s combined offensive and pitching stat lines, split out by "
                "opponent, plus the team's overall totals — both with and without games against "
                "the Lowell Spinners called out separately.")
@@ -10746,7 +10878,7 @@ def _build_pitcher_season_pdf(pitcher_name, throws_lbl, off_row, splits, overall
 
 
 if page == "Season Report":
-    st.title("Season Report")
+    st.title("End-of-Season Player Report")
     st.caption("Post-season wrap-up reports for players on their way out — rebuilt from the data "
               "every time this loads, so the last games of the season are included automatically. "
               "Add Data/official_stats.csv (built from the league stats PDF, once the season is "

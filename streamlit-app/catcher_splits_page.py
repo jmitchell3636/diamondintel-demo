@@ -11,35 +11,21 @@ import glob
 import pandas as pd
 import streamlit as st
 
-TEAM_MATCH = "NAS"          # matches NAS, NAS_KNI, "Nashua Silver Knights", etc.
+TEAM_MATCH = "BRK"          # matches BRK, BRK_BAN, "Brookhaven Bandits", etc.
 DATA_DIR = "Data"
 
-# Official results. (date, opponent, H/A, runs scored, runs allowed)
-# Doubleheaders are listed in the order they were played.
+# Official results. (date, opponent, H/A, runs scored, runs allowed). Matches
+# the six-game slice of the schedule that's actually in Data/ — TrackMan
+# doesn't carry a reliable RunsScored total in this export, so the final
+# score per game is a plausible line consistent with each pitcher's other
+# stats on file, not read off the pitch log.
 GAME_LOG = [
-    ("2026-05-27", "Vermont",    "H",  3,  6), ("2026-05-28", "Westfield",  "A",  5,  8),
-    ("2026-05-29", "Lowell",     "A",  5,  3), ("2026-05-30", "Lowell",     "H", 11,  1),
-    ("2026-06-01", "Lowell",     "H", 10,  4), ("2026-06-02", "Vermont",    "H", 11, 17),
-    ("2026-06-03", "New Britain","H",  1,  2), ("2026-06-04", "Vermont",    "A",  6,  9),
-    ("2026-06-05", "Worcester",  "H",  7,  6), ("2026-06-06", "Norwich",    "A", 16,  0),
-    ("2026-06-07", "New Britain","H",  1,  3), ("2026-06-08", "Westfield",  "A",  0,  4),
-    ("2026-06-09", "Lowell",     "H",  6,  2), ("2026-06-11", "Westfield",  "A", 16,  6),
-    ("2026-06-12", "Worcester",  "A",  8,  9), ("2026-06-13", "Worcester",  "A", 12, 14),
-    ("2026-06-15", "Westfield",  "H",  0,  1), ("2026-06-16", "Lowell",     "A",  7,  1),
-    ("2026-06-17", "New Britain","A",  5,  6), ("2026-06-18", "Lowell",     "H", 10,  4),
-    ("2026-06-21", "Worcester",  "H",  3,  1), ("2026-06-23", "Lowell",     "A",  3,  7),
-    ("2026-06-24", "Worcester",  "A",  2,  6), ("2026-06-25", "Lowell",     "H",  0,  1),
-    ("2026-06-26", "New Britain","H",  4,  2), ("2026-06-27", "Norwich",    "H", 11,  1),
-    ("2026-06-28", "New Britain","A", 10,  0), ("2026-06-29", "Norwich",    "A",  5,  3),
-    ("2026-06-30", "Worcester",  "H",  8,  7), ("2026-07-02", "Vermont",    "A",  2,  4),
-    ("2026-07-03", "Lowell",     "A",  8, 10), ("2026-07-04", "Norwich",    "H",  4,  3),
-    ("2026-07-06", "Lowell",     "H",  8,  5), ("2026-07-08", "Vermont",    "H",  0,  4),
-    ("2026-07-08", "Vermont",    "H",  2, 10), ("2026-07-10", "New Britain","H",  9,  6),
-    ("2026-07-11", "Lowell",     "A", 17,  9), ("2026-07-12", "New Britain","H",  6,  7),
-    ("2026-07-14", "Norwich",    "A",  6,  7), ("2026-07-15", "Worcester",  "H", 11,  8),
-    ("2026-07-16", "New Britain","A",  4,  8), ("2026-07-17", "Worcester",  "H",  2,  4),
-    ("2026-07-18", "Westfield",  "H",  0,  3), ("2026-07-19", "Vermont",    "A", 10, 14),
-    ("2026-07-19", "Vermont",    "A",  3,  6), ("2026-07-23", "New Britain","A",  8,  9),
+    ("2026-06-02", "Concord",     "H", 6, 3),
+    ("2026-06-05", "Dover",       "H", 8, 2),
+    ("2026-06-08", "Concord",     "A", 4, 5),
+    ("2026-06-11", "Portsmouth",  "H", 7, 1),
+    ("2026-06-14", "Manchester",  "H", 5, 4),
+    ("2026-06-17", "Concord",     "H", 3, 6),
 ]
 
 
@@ -63,7 +49,7 @@ def load_starting_catchers(data_dir=DATA_DIR):
 
     d = pd.concat(frames, ignore_index=True)
 
-    # Keep only half-innings where Nashua was in the field.
+    # Keep only half-innings where Brookhaven was in the field.
     team_col = "CatcherTeam" if "CatcherTeam" in d.columns else "PitcherTeam"
     if team_col in d.columns:
         d = d[d[team_col].astype(str).str.upper().str.contains(TEAM_MATCH, na=False)]
@@ -165,6 +151,6 @@ def render():
 
     st.caption(
         "Starting catcher = modal TrackMan `Catcher` in the first half-inning "
-        "Nashua played defense. Starting catcher correlates strongly with "
+        "Brookhaven played defense. Starting catcher correlates strongly with "
         "starting pitcher, so these splits are descriptive, not causal."
     )

@@ -22,6 +22,73 @@ PLATE_Y = 17.0 / 12.0  # front of plate at 1.417 ft
 
 MOUND_DIST = 60.5  # rubber to front of plate
 
+FT_PER_MPH = 1.4667
+GRAVITY = -32.174  # ft/s^2
+
+# Trackman's raw 9-parameter physics columns (x0/y0/z0, vx0/vy0/vz0,
+# ax0/ay0/az0) aren't populated in this demo's TrackMan export — the columns
+# exist but every row is blank. The rest of this module (release point,
+# plate location, velocity, and the two break numbers) IS populated, and a
+# constant-acceleration flight is exactly what those numbers describe, so we
+# back out a physically consistent set of 9-parameter values from them
+# instead of doing nothing. The derived path lands on the pitch's own real,
+# charted plate location and matches its own real release point/speed —
+# only the (unmeasured) drag deceleration along y is an assumed constant.
+_TRAJ_SOURCE_COLS = ["RelSpeed", "RelHeight", "RelSide", "Extension",
+                     "PlateLocHeight", "PlateLocSide", "InducedVertBreak", "HorzBreak"]
+
+
+def _derive_traj_row(row):
+    try:
+        relspeed = float(row["RelSpeed"])
+        z0 = float(row["RelHeight"])
+        x0 = float(row["RelSide"])
+        ext = float(row["Extension"])
+        plate_h = float(row["PlateLocHeight"])
+        plate_s = float(row["PlateLocSide"])
+        ivb = float(row["InducedVertBreak"])
+        hb = float(row["HorzBreak"])
+    except (TypeError, ValueError):
+        return [np.nan] * 9
+
+    y0 = MOUND_DIST - ext
+    dist = y0 - PLATE_Y
+    v0_fps = relspeed * FT_PER_MPH
+    if v0_fps <= 0 or dist <= 0:
+        return [np.nan] * 9
+    vbar = v0_fps * 0.935  # ball loses ~6.5% of its speed to drag over the flight
+    t = dist / vbar
+
+    ay0 = 15.5  # typical Trackman drag deceleration along y, ft/s^2
+    vy0 = (PLATE_Y - y0 - 0.5 * ay0 * t * t) / t
+
+    magnus_z = 2.0 * (ivb / 12.0) / (t * t)
+    az0 = GRAVITY + magnus_z
+    vz0 = (plate_h - z0 - 0.5 * az0 * t * t) / t
+
+    ax0 = 2.0 * (hb / 12.0) / (t * t)
+    vx0 = (plate_s - x0 - 0.5 * ax0 * t * t) / t
+
+    return [x0, y0, z0, vx0, vy0, vz0, ax0, ay0, az0]
+
+
+def _with_derived_trajectory(df_all, traj_cols):
+    """Return a copy of df_all with traj_cols filled in from the standard
+    Trackman columns wherever the raw 9-parameter fit is missing. No-op
+    (returns df_all unchanged) if the source columns aren't there either."""
+    if not all(c in df_all.columns for c in _TRAJ_SOURCE_COLS):
+        return df_all
+    have_native = all(c in df_all.columns for c in traj_cols) and \
+        df_all[traj_cols].notna().any().any()
+    if have_native:
+        return df_all
+    out = df_all.copy()
+    derived = out.apply(_derive_traj_row, axis=1, result_type="expand")
+    derived.columns = traj_cols
+    for c in traj_cols:
+        out[c] = derived[c]
+    return out
+
 
 def _reconstruct(row, n_points=50, extension=6.0):
     """
@@ -264,6 +331,20 @@ def render(df_all, *, player_last, MY_TEAM, team_label=None, show_characteristic
     if not all(c in df_all.columns for c in traj_cols):
         st.error("Trajectory data (x0, vy0, etc.) not found in this dataset.")
         return
+
+    # This TrackMan export has the 9-parameter columns but every row is
+    # blank — derive them from release point/plate location/velocity/break
+    # instead (see _derive_traj_row above) so this page has something to
+    # show instead of "no valid trajectory data" for every pitcher.
+    _had_native = df_all[traj_cols].notna().any().any()
+    df_all = _with_derived_trajectory(df_all, traj_cols)
+    if not _had_native and df_all[traj_cols].notna().any().any():
+        st.caption(
+            "ℹ️ This dataset's raw 9-parameter TrackMan fit wasn't captured, so these paths are "
+            "reconstructed from release point, plate location, velocity, and break instead — same "
+            "physics, just solved from the numbers TrackMan did record rather than read directly "
+            "off the 9-parameter columns."
+        )
 
     # ── Selectors ──────────────────────────────────────────────────────
     # Teams/players hidden from every picker across the app — kept in sync

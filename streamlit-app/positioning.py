@@ -42,6 +42,24 @@ def _landing(row):
     return float(d * np.sin(rad)), float(d * np.cos(rad))
 
 
+
+# Standard defensive alignment (feet, same side/dist coordinate system as the
+# canvas below: side is + toward 1B/right, dist is toward CF) — used as the
+# fielder overlay when no *_playerpositioning_FHC.csv files are on file yet.
+# Depths are typical college-summer-league straight-away starting spots, not
+# shaded to any one hitter, since we don't have a real per-play alignment to
+# show.
+_STANDARD_ALIGNMENT = [
+    {"p": "1B", "side": 46.0,  "dist": 66.0},
+    {"p": "2B", "side": 26.0,  "dist": 130.0},
+    {"p": "SS", "side": -24.0, "dist": 145.0},
+    {"p": "3B", "side": -55.0, "dist": 68.0},
+    {"p": "LF", "side": -140.0, "dist": 290.0},
+    {"p": "CF", "side": 5.0,   "dist": 330.0},
+    {"p": "RF", "side": 150.0, "dist": 290.0},
+]
+
+
 def render(df_all, *, MY_TEAM, player_last, DATA_DIR):
     st.title("Opponent Positioning vs Our Spray")
     st.caption(
@@ -51,28 +69,34 @@ def render(df_all, *, MY_TEAM, player_last, DATA_DIR):
     )
 
     pos = _load_positioning(str(DATA_DIR))
-    if pos.empty:
-        st.info(
-            "No player-positioning files found. Upload TrackMan "
-            "`*_playerpositioning_FHC.csv` files alongside the game CSVs "
-            "to use this feature."
-        )
-        return
 
-    # Our balls in play that have positioning (opponent on defense)
+    # Our balls in play — this comes straight from the game CSVs, so it's
+    # real regardless of whether positioning files exist.
     bip = df_all[(df_all["BatterTeam"] == MY_TEAM) &
                  (df_all["PitchCall"] == "InPlay")].copy()
     if bip.empty:
         st.info("No balls in play found for our hitters yet.")
         return
 
-    merged = bip.merge(
-        pos[pos["BatterTeam"] == MY_TEAM],
-        on="PitchUID", suffixes=("", "_pos"), how="inner"
-    )
-    if merged.empty:
-        st.info("No overlap between our balls in play and positioning files yet.")
-        return
+    using_standard_alignment = pos.empty
+    if using_standard_alignment:
+        st.info(
+            "No `*_playerpositioning_FHC.csv` files on file yet, so the fielder "
+            "overlay below is a standard straight-away alignment rather than the "
+            "opponent's actual tracked positioning for these plays. Add those "
+            "TrackMan files alongside the game CSVs to replace it with the real "
+            "thing.",
+            icon="ℹ️",
+        )
+        merged = bip
+    else:
+        merged = bip.merge(
+            pos[pos["BatterTeam"] == MY_TEAM],
+            on="PitchUID", suffixes=("", "_pos"), how="inner"
+        )
+        if merged.empty:
+            st.info("No overlap between our balls in play and positioning files yet.")
+            return
 
     # ── Hitter filter (per-hitter, sorted by sample size) ──────────────
     counts = merged["Batter"].value_counts()
@@ -114,15 +138,18 @@ def render(df_all, *, MY_TEAM, player_last, DATA_DIR):
         })
 
     # ── Average opponent alignment over this filter ────────────────────
-    fielders = []
-    for p in ["1B", "2B", "3B", "SS", "LF", "CF", "RF"]:
-        zx, dx = f"{p}_PositionAtReleaseZ", f"{p}_PositionAtReleaseX"
-        if zx in view.columns and view[zx].notna().any():
-            fielders.append({
-                "p": p,
-                "side": round(float(view[zx].mean()), 1),
-                "dist": round(float(view[dx].mean()), 1),
-            })
+    if using_standard_alignment:
+        fielders = list(_STANDARD_ALIGNMENT)
+    else:
+        fielders = []
+        for p in ["1B", "2B", "3B", "SS", "LF", "CF", "RF"]:
+            zx, dx = f"{p}_PositionAtReleaseZ", f"{p}_PositionAtReleaseX"
+            if zx in view.columns and view[zx].notna().any():
+                fielders.append({
+                    "p": p,
+                    "side": round(float(view[zx].mean()), 1),
+                    "dist": round(float(view[dx].mean()), 1),
+                })
 
     if not sprays or not fielders:
         st.info("Not enough data to render the field.")
