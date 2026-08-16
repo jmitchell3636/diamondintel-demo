@@ -1,6 +1,8 @@
 """Synthetic TrackMan-format pitch-by-pitch data generator for the
 DiamondIntel demo — fictional teams/players, real schema, real app logic.
 Pure stdlib (no pandas/numpy available in this sandbox)."""
+
+import math
 import csv, random, os
 
 random.seed(7)
@@ -131,12 +133,24 @@ def clamp(x, lo, hi): return max(lo, min(hi, x))
 
 def sim_pitch(pitcher_throws, ptype, base):
     usage, velo, ivb, hb, spin = base
+    ivb_j = ivb + random.gauss(0, 1.3)
+    hb_j  = hb + random.gauss(0, 1.3)
+    # Spin axis (clock-face degrees, 0-360) — derived from the break shape
+    # so it's physically consistent with IVB/HB rather than a free variable.
+    spin_axis = (math.degrees(math.atan2(hb_j, ivb_j)) + 360) % 360
+    # Approach angles at the plate — vertical gets steeper (more negative)
+    # for pitches with less rise; horizontal tracks the glove-side/arm-side break.
+    vert_appr = round(clamp(-6.2 - (ivb_j - 15) / 12 + random.gauss(0, 0.5), -11, -1.5), 1)
+    horz_appr = round(clamp(hb_j / 6 + random.gauss(0, 0.5), -6, 6), 1)
     return dict(
         TaggedPitchType=ptype,
         RelSpeed=round(velo + random.gauss(0, 0.9), 1),
-        InducedVertBreak=round(ivb + random.gauss(0, 1.3), 1),
-        HorzBreak=round(hb + random.gauss(0, 1.3), 1),
+        InducedVertBreak=round(ivb_j, 1),
+        HorzBreak=round(hb_j, 1),
         SpinRate=round(spin + random.gauss(0, 60)),
+        SpinAxis=round(spin_axis, 1),
+        VertApprAngle=vert_appr,
+        HorzApprAngle=horz_appr,
         RelHeight=round(5.8 + random.gauss(0, 0.15), 2) if pitcher_throws == "Right" else round(5.9 + random.gauss(0, 0.15), 2),
         RelSide=round((1.9 if pitcher_throws == "Right" else -1.9) + random.gauss(0, 0.1), 2),
         Extension=round(6.2 + random.gauss(0, 0.2), 2),
@@ -251,6 +265,29 @@ def sim_pa(game, half, inning, top_bot, pa_idx, outs_before,
                 runs = 1
             elif outcome in ("1B", "2B", "3B") and random.random() < {"1B": 0.10, "2B": 0.32, "3B": 0.60}[outcome]:
                 runs = 1
+
+            # Distance (ft) — driven by outcome and batted-ball shape, not just EV,
+            # so groundouts stay short and home runs clear the fence.
+            if outcome == "HR":
+                distance = clamp(random.gauss(370, 22), 330, 430)
+            elif outcome == "3B":
+                distance = clamp(random.gauss(345, 20), 290, 410)
+            elif outcome == "2B":
+                distance = clamp(random.gauss(310, 25), 220, 385)
+            elif angle < 10:
+                distance = clamp(random.gauss(110, 35), 20, 220)
+            elif angle > 40:
+                distance = clamp(random.gauss(110, 35), 30, 220)
+            else:
+                distance = clamp(random.gauss(230, 55), 80, 340)
+            row["Distance"] = round(distance, 1)
+            row["LastTrackedDistance"] = row["Distance"]
+
+            # Direction (deg, Trackman convention: negative = left field,
+            # positive = right field), skewed toward the batter's pull side.
+            pull_mean = -14 if bside == "Right" else 14
+            direction = clamp(random.gauss(pull_mean, 22), -45, 45)
+            row["Direction"] = round(direction, 1)
 
         rows.append(row)
         if outcome:
