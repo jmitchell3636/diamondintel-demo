@@ -40,7 +40,7 @@ def load_starting_catchers(data_dir=DATA_DIR):
             continue
         if "Catcher" not in df.columns or "Date" not in df.columns:
             continue
-        keep = [c for c in ("GameUID", "Date", "Time", "Inning", "Catcher",
+        keep = [c for c in ("GameUID", "GameID", "Date", "Time", "Inning", "Catcher",
                             "CatcherTeam", "PitcherTeam") if c in df.columns]
         frames.append(df[keep])
 
@@ -61,7 +61,15 @@ def load_starting_catchers(data_dir=DATA_DIR):
     d["Date"] = pd.to_datetime(d["Date"], errors="coerce")
     d = d[d["Date"].notna()]
 
-    key = "GameUID" if "GameUID" in d.columns else "Date"
+    # Prefer a real per-game identifier, but only if it's actually populated —
+    # GameUID exists as a blank column in this export, and grouping on an
+    # all-NaN key drops every row (pandas groupby excludes NaN groups).
+    if "GameUID" in d.columns and d["GameUID"].notna().any():
+        key = "GameUID"
+    elif "GameID" in d.columns and d["GameID"].notna().any():
+        key = "GameID"
+    else:
+        key = "Date"
     if "Inning" not in d.columns:
         d["Inning"] = 1
 
