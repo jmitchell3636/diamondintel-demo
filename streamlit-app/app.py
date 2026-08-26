@@ -3081,46 +3081,16 @@ if page == "Batter Analysis":
 
         zone_col, arsenal_col = st.columns([1, 1.4])
 
+        # Filter to pitches with location data (also used by the heatmap
+        # filters further down, so compute it before either column renders).
+        zp = atk_bp[atk_bp["PlateLocSide"].notna() & atk_bp["PlateLocHeight"].notna()].copy()
+
         # ── ZONE MAP ──────────────────────────────
         with zone_col:
             st.markdown("#### Zone Attack Map")
             st.caption("Exit velocity heatmap — red/white = hard contact, blue = weak contact")
-
-            # Zone boundaries (feet): standard strike zone
-            # Side: -0.83 to +0.83 (plate is 17in = 1.42ft wide, half = 0.71 + ball radius)
-            # Height: bottom ~1.5ft, top ~3.5ft — varies by batter but use standard
-            side_edges   = [-2.0, -0.28, 0.28, 2.0]   # left edge, inner thirds, right edge
-            height_edges = [1.0, 1.83, 2.67, 3.5]      # low, mid-low, mid-high, high
-
-            # Filter to pitches with location data
-            zp = atk_bp[atk_bp["PlateLocSide"].notna() & atk_bp["PlateLocHeight"].notna()].copy()
-
-            # Build 3x3 zone grid (row 0 = top, col 0 = left from catcher view)
-            ZONE_ROWS = 3
-            ZONE_COLS = 3
-            zones = {}
-            for row in range(ZONE_ROWS):
-                for col in range(ZONE_COLS):
-                    h_lo = height_edges[ZONE_ROWS - 1 - row]
-                    h_hi = height_edges[ZONE_ROWS - row]
-                    s_lo = side_edges[col]
-                    s_hi = side_edges[col + 1]
-                    mask = (
-                        zp["PlateLocHeight"].between(h_lo, h_hi) &
-                        zp["PlateLocSide"].between(s_lo, s_hi)
-                    )
-                    zone_pitches = zp[mask]
-                    n       = len(zone_pitches)
-                    swings  = zone_pitches["IsSwing"].sum()
-                    whiffs  = zone_pitches["IsWhiff"].sum()
-                    hits    = zone_pitches["IsHit"].sum()
-                    abs_z   = zone_pitches["IsAB"].sum()
-                    avg_ev  = zone_pitches["ExitSpeed"].mean() if zone_pitches["ExitSpeed"].notna().any() else None
-                    whiff_r = whiffs / swings if swings > 0 else None
-                    ba      = hits / abs_z if abs_z > 0 else None
-                    zones[(row, col)] = dict(n=n, avg_ev=avg_ev, whiff_r=whiff_r, ba=ba, swings=swings)
-
-
+            _render_kde_heatmap(zp, weight_col="ExitSpeed",
+                                key_suffix=f"atk_zone_{batter}_{atk_hand}", title="")
 
         # ── PITCH ARSENAL ─────────────────────────────
         with arsenal_col:
