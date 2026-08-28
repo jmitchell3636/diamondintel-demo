@@ -3079,126 +3079,58 @@ if page == "Batter Analysis":
         else:
             st.info("Not enough data for per-pitch-type breakdown.")
 
-        zone_col, arsenal_col = st.columns([1, 1.4])
-
-        # Filter to pitches with location data (also used by the heatmap
-        # filters further down, so compute it before either column renders).
+        # Filter to pitches with location data (used by the heatmap filters
+        # further down).
         zp = atk_bp[atk_bp["PlateLocSide"].notna() & atk_bp["PlateLocHeight"].notna()].copy()
 
-        # ── ZONE MAP ──────────────────────────────
-        with zone_col:
-            st.markdown("#### Zone Attack Map")
-            st.caption("Avg exit velocity by zone — red = hard contact, blue = weak contact, "
-                       "grey = no batted balls there")
-
-            # 3x3 grid over the plate + immediate surroundings (row 0 = top,
-            # col 0 = left, from the catcher's view behind the plate).
-            side_edges   = [-2.0, -0.28, 0.28, 2.0]
-            height_edges = [1.0, 1.83, 2.67, 3.5]
-
-            zones = {}
-            for row in range(3):
-                for col in range(3):
-                    h_lo = height_edges[2 - row]
-                    h_hi = height_edges[3 - row]
-                    s_lo = side_edges[col]
-                    s_hi = side_edges[col + 1]
-                    zone_pitches = zp[
-                        zp["PlateLocHeight"].between(h_lo, h_hi) &
-                        zp["PlateLocSide"].between(s_lo, s_hi)
-                    ]
-                    ev = zone_pitches["ExitSpeed"]
-                    zones[(row, col)] = dict(
-                        n=len(zone_pitches),
-                        avg_ev=ev.mean() if ev.notna().any() else None,
-                    )
-
-            def _ev_cell_color(avg_ev):
-                """Diverging blue -> white -> red, anchored on typical EV range."""
-                if avg_ev is None:
-                    return "#F1F5F9", "#94a3b8"
-                lo, mid, hi = 75.0, 88.0, 100.0
-                if avg_ev <= mid:
-                    t = max(0.0, min(1.0, (avg_ev - lo) / (mid - lo)))
-                    r, g, b = int(59 + t * (255 - 59)), int(130 + t * (255 - 130)), int(246 + t * (255 - 246))
-                else:
-                    t = max(0.0, min(1.0, (avg_ev - mid) / (hi - mid)))
-                    r, g, b = 255, int(255 - t * (255 - 68)), int(255 - t * (255 - 68))
-                text = "#ffffff" if avg_ev <= lo + (mid - lo) * 0.35 or avg_ev >= mid + (hi - mid) * 0.5 else "#1e293b"
-                return f"rgb({r},{g},{b})", text
-
-            cell_html = ""
-            for row in range(3):
-                cell_html += "<tr>"
-                for col in range(3):
-                    z = zones[(row, col)]
-                    bg, tc = _ev_cell_color(z["avg_ev"])
-                    label = f"{z['avg_ev']:.1f}" if z["avg_ev"] is not None else "—"
-                    cell_html += (
-                        f"<td style='background:{bg};color:{tc};text-align:center;"
-                        f"padding:18px 4px;border-radius:6px;font-weight:700;font-size:1rem;'>"
-                        f"{label}<br><span style='font-size:0.7rem;font-weight:500;opacity:0.85;'>"
-                        f"n={z['n']}</span></td>"
-                    )
-                cell_html += "</tr>"
-
-            st.markdown(
-                f"<table style='width:100%;border-collapse:separate;border-spacing:5px;'>"
-                f"{cell_html}</table>",
-                unsafe_allow_html=True,
-            )
-            st.caption("Grid covers the plate and just off it — top row = high pitches, "
-                      "middle column = down the middle.")
-
         # ── PITCH ARSENAL ─────────────────────────────
-        with arsenal_col:
-            st.markdown("#### Pitch Arsenal Breakdown")
+        st.markdown("#### Pitch Arsenal Breakdown")
 
-            pitch_rows = []
-            for ptype, grp in atk_bp.groupby("PitchType"):
-                if ptype in (None, "Undefined", "Other") or pd.isna(ptype):
-                    continue
-                n_pitches = len(grp)
-                swings    = grp["IsSwing"].sum()
-                whiffs    = grp["IsWhiff"].sum()
-                hits      = grp["IsHit"].sum()
-                abs_p     = grp["IsAB"].sum()
-                ev_grp    = grp[grp["ExitSpeed"].notna()]
-                # Chase: swings on pitches outside zone
-                # Approximate: PlateLocSide or Height outside strike zone bounds
-                chase_mask = (
-                    grp["PlateLocSide"].notna() &
-                    grp["PlateLocHeight"].notna() & (
-                        (grp["PlateLocSide"].abs() > 0.83) |
-                        (grp["PlateLocHeight"] < 1.5) |
-                        (grp["PlateLocHeight"] > 3.5)
-                    )
+        pitch_rows = []
+        for ptype, grp in atk_bp.groupby("PitchType"):
+            if ptype in (None, "Undefined", "Other") or pd.isna(ptype):
+                continue
+            n_pitches = len(grp)
+            swings    = grp["IsSwing"].sum()
+            whiffs    = grp["IsWhiff"].sum()
+            hits      = grp["IsHit"].sum()
+            abs_p     = grp["IsAB"].sum()
+            ev_grp    = grp[grp["ExitSpeed"].notna()]
+            # Chase: swings on pitches outside zone
+            # Approximate: PlateLocSide or Height outside strike zone bounds
+            chase_mask = (
+                grp["PlateLocSide"].notna() &
+                grp["PlateLocHeight"].notna() & (
+                    (grp["PlateLocSide"].abs() > 0.83) |
+                    (grp["PlateLocHeight"] < 1.5) |
+                    (grp["PlateLocHeight"] > 3.5)
                 )
-                chases    = grp[chase_mask & grp["IsSwing"]].shape[0]
-                balls_out = grp[chase_mask].shape[0]
+            )
+            chases    = grp[chase_mask & grp["IsSwing"]].shape[0]
+            balls_out = grp[chase_mask].shape[0]
 
-                whiff_pct  = whiffs / swings if swings > 0 else None
-                chase_pct  = chases / balls_out if balls_out > 0 else None
-                ba         = hits / abs_p if abs_p > 0 else None
-                avg_ev_p   = ev_grp["ExitSpeed"].mean() if len(ev_grp) > 0 else None
-                hard_p     = (ev_grp["ExitSpeed"] >= 90).mean() if len(ev_grp) > 0 else None
+            whiff_pct  = whiffs / swings if swings > 0 else None
+            chase_pct  = chases / balls_out if balls_out > 0 else None
+            ba         = hits / abs_p if abs_p > 0 else None
+            avg_ev_p   = ev_grp["ExitSpeed"].mean() if len(ev_grp) > 0 else None
+            hard_p     = (ev_grp["ExitSpeed"] >= 90).mean() if len(ev_grp) > 0 else None
 
-                pitch_rows.append({
-                    "Pitch":      ptype,
-                    "Pitches":    n_pitches,
-                    "Whiff%":     f"{whiff_pct:.0%}" if whiff_pct is not None else "—",
-                    "Chase%":     f"{chase_pct:.0%}" if chase_pct is not None else "—",
-                    "BA":         f".{int(ba*1000):03d}" if ba is not None else "—",
-                    "Avg EV":     f"{avg_ev_p:.1f}" if avg_ev_p is not None else "—",
-                    "Hard%":      f"{hard_p:.0%}" if hard_p is not None else "—",
-                })
+            pitch_rows.append({
+                "Pitch":      ptype,
+                "Pitches":    n_pitches,
+                "Whiff%":     f"{whiff_pct:.0%}" if whiff_pct is not None else "—",
+                "Chase%":     f"{chase_pct:.0%}" if chase_pct is not None else "—",
+                "BA":         f".{int(ba*1000):03d}" if ba is not None else "—",
+                "Avg EV":     f"{avg_ev_p:.1f}" if avg_ev_p is not None else "—",
+                "Hard%":      f"{hard_p:.0%}" if hard_p is not None else "—",
+            })
 
-            if pitch_rows:
-                arsenal_df = pd.DataFrame(pitch_rows).sort_values("Pitches", ascending=False).reset_index(drop=True)
-                st.dataframe(arsenal_df, use_container_width=True, height=300, hide_index=True)
-                st.caption(f"Based on {len(atk_bp)} pitches vs {'RHP' if atk_hand=='Right' else 'LHP' if atk_hand=='Left' else 'all pitchers'}")
-            else:
-                st.info("No pitch type data available.")
+        if pitch_rows:
+            arsenal_df = pd.DataFrame(pitch_rows).sort_values("Pitches", ascending=False).reset_index(drop=True)
+            st.dataframe(arsenal_df, use_container_width=True, height=300, hide_index=True)
+            st.caption(f"Based on {len(atk_bp)} pitches vs {'RHP' if atk_hand=='Right' else 'LHP' if atk_hand=='Left' else 'all pitchers'}")
+        else:
+            st.info("No pitch type data available.")
 
         # ── HEATMAPS — full width below table ─────────────────────────────
         st.divider()
