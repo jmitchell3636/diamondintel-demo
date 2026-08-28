@@ -3081,46 +3081,74 @@ if page == "Batter Analysis":
 
         zone_col, arsenal_col = st.columns([1, 1.4])
 
+        # Filter to pitches with location data (also used by the heatmap
+        # filters further down, so compute it before either column renders).
+        zp = atk_bp[atk_bp["PlateLocSide"].notna() & atk_bp["PlateLocHeight"].notna()].copy()
+
         # ── ZONE MAP ──────────────────────────────
         with zone_col:
             st.markdown("#### Zone Attack Map")
-            st.caption("Exit velocity heatmap — red/white = hard contact, blue = weak contact")
+            st.caption("Avg exit velocity by zone — red = hard contact, blue = weak contact, "
+                       "grey = no batted balls there")
 
-            # Zone boundaries (feet): standard strike zone
-            # Side: -0.83 to +0.83 (plate is 17in = 1.42ft wide, half = 0.71 + ball radius)
-            # Height: bottom ~1.5ft, top ~3.5ft — varies by batter but use standard
-            side_edges   = [-2.0, -0.28, 0.28, 2.0]   # left edge, inner thirds, right edge
-            height_edges = [1.0, 1.83, 2.67, 3.5]      # low, mid-low, mid-high, high
+            # 3x3 grid over the plate + immediate surroundings (row 0 = top,
+            # col 0 = left, from the catcher's view behind the plate).
+            side_edges   = [-2.0, -0.28, 0.28, 2.0]
+            height_edges = [1.0, 1.83, 2.67, 3.5]
 
-            # Filter to pitches with location data
-            zp = atk_bp[atk_bp["PlateLocSide"].notna() & atk_bp["PlateLocHeight"].notna()].copy()
-
-            # Build 3x3 zone grid (row 0 = top, col 0 = left from catcher view)
-            ZONE_ROWS = 3
-            ZONE_COLS = 3
             zones = {}
-            for row in range(ZONE_ROWS):
-                for col in range(ZONE_COLS):
-                    h_lo = height_edges[ZONE_ROWS - 1 - row]
-                    h_hi = height_edges[ZONE_ROWS - row]
+            for row in range(3):
+                for col in range(3):
+                    h_lo = height_edges[2 - row]
+                    h_hi = height_edges[3 - row]
                     s_lo = side_edges[col]
                     s_hi = side_edges[col + 1]
-                    mask = (
+                    zone_pitches = zp[
                         zp["PlateLocHeight"].between(h_lo, h_hi) &
                         zp["PlateLocSide"].between(s_lo, s_hi)
+                    ]
+                    ev = zone_pitches["ExitSpeed"]
+                    zones[(row, col)] = dict(
+                        n=len(zone_pitches),
+                        avg_ev=ev.mean() if ev.notna().any() else None,
                     )
-                    zone_pitches = zp[mask]
-                    n       = len(zone_pitches)
-                    swings  = zone_pitches["IsSwing"].sum()
-                    whiffs  = zone_pitches["IsWhiff"].sum()
-                    hits    = zone_pitches["IsHit"].sum()
-                    abs_z   = zone_pitches["IsAB"].sum()
-                    avg_ev  = zone_pitches["ExitSpeed"].mean() if zone_pitches["ExitSpeed"].notna().any() else None
-                    whiff_r = whiffs / swings if swings > 0 else None
-                    ba      = hits / abs_z if abs_z > 0 else None
-                    zones[(row, col)] = dict(n=n, avg_ev=avg_ev, whiff_r=whiff_r, ba=ba, swings=swings)
 
+            def _ev_cell_color(avg_ev):
+                """Diverging blue -> white -> red, anchored on typical EV range."""
+                if avg_ev is None:
+                    return "#F1F5F9", "#94a3b8"
+                lo, mid, hi = 75.0, 88.0, 100.0
+                if avg_ev <= mid:
+                    t = max(0.0, min(1.0, (avg_ev - lo) / (mid - lo)))
+                    r, g, b = int(59 + t * (255 - 59)), int(130 + t * (255 - 130)), int(246 + t * (255 - 246))
+                else:
+                    t = max(0.0, min(1.0, (avg_ev - mid) / (hi - mid)))
+                    r, g, b = 255, int(255 - t * (255 - 68)), int(255 - t * (255 - 68))
+                text = "#ffffff" if avg_ev <= lo + (mid - lo) * 0.35 or avg_ev >= mid + (hi - mid) * 0.5 else "#1e293b"
+                return f"rgb({r},{g},{b})", text
 
+            cell_html = ""
+            for row in range(3):
+                cell_html += "<tr>"
+                for col in range(3):
+                    z = zones[(row, col)]
+                    bg, tc = _ev_cell_color(z["avg_ev"])
+                    label = f"{z['avg_ev']:.1f}" if z["avg_ev"] is not None else "—"
+                    cell_html += (
+                        f"<td style='background:{bg};color:{tc};text-align:center;"
+                        f"padding:18px 4px;border-radius:6px;font-weight:700;font-size:1rem;'>"
+                        f"{label}<br><span style='font-size:0.7rem;font-weight:500;opacity:0.85;'>"
+                        f"n={z['n']}</span></td>"
+                    )
+                cell_html += "</tr>"
+
+            st.markdown(
+                f"<table style='width:100%;border-collapse:separate;border-spacing:5px;'>"
+                f"{cell_html}</table>",
+                unsafe_allow_html=True,
+            )
+            st.caption("Grid covers the plate and just off it — top row = high pitches, "
+                      "middle column = down the middle.")
 
         # ── PITCH ARSENAL ─────────────────────────────
         with arsenal_col:
