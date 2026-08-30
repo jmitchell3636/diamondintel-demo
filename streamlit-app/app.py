@@ -3197,380 +3197,103 @@ if page == "Batter Analysis":
 
 elif page == "Lineup Builder":
     st.title("Lineup Builder — Brookhaven Bandits")
+    st.caption("Example recommended lineup — a fixed sample matchup, not computed from tonight's actual opponent.")
 
-    ctrl1, ctrl2, ctrl3 = st.columns([1.2, 1.5, 1.5])
-    with ctrl1:
-        opp_hand = st.selectbox("Opponent Pitcher Throws",
-            options=["","Right","Left"],
-            format_func=lambda x: {"":"Unknown / TBD","Right":"RHP","Left":"LHP"}[x])
-    with ctrl2:
-        opp_teams_lu = sorted([t for t in _team_options(df_all["PitcherTeam"]) if t != MY_TEAM])
-        opp_team_lu  = st.selectbox("Opponent Team",
-            options=[""] + opp_teams_lu,
-            format_func=lambda x: team_label(x) if x else "Select opponent…",
-            key="lu_opp_team")
-    with ctrl3:
-        lu_pitchers = []
-        if opp_team_lu:
-            pitcher_info = (df_all[df_all["PitcherTeam"] == opp_team_lu]
-                .groupby(["Pitcher","PitcherThrows"]).size()
-                .reset_index(name="Pitches")
-                .sort_values("Pitches", ascending=False))
-            lu_pitchers = [p for p in pitcher_info["Pitcher"].tolist() if not _is_removed(p)]
-        matchup_pitcher = st.selectbox("Opposing Pitcher",
-            options=[""] + lu_pitchers,
-            format_func=lambda x: x if x else "Select pitcher…",
-            key="lu_pitcher")
+    st.markdown("### Vs. Concord River Cats — RHP Marcus Delgado")
 
-    st.divider()
-
-    # Full roster hitters — include even those with no at-bats
-    all_hitters = sorted([n for n, p in ROSTER.items()
-        if p in BATTING_BASE_POSITIONS
-        and not _is_removed(n)
-        and not _is_report_hidden(n)
-        and not any(n.startswith(k.split(",")[0]) and n != k
-                    for k in ROSTER if ROSTER[k] == p and k != n
-                    and k.split(",")[0] == n.split(",")[0])])
-
-    # Deduplicate aliases — prefer "First Last" style names that appear in data
-    my_pitches = df_all[df_all["BatterTeam"] == MY_TEAM] if not df_all.empty else pd.DataFrame()
-    data_names = set(my_pitches["Batter"].dropna().unique()) if not my_pitches.empty else set()
-
-    # Build canonical hitter list: prefer data name, fall back to roster name
-    seen_last = {}
-    canonical_hitters = []
-    for name in sorted(ROSTER.keys()):
-        if ROSTER[name] not in BATTING_BASE_POSITIONS:
-            continue
-        last = name.split(",")[0].strip()
-        # If we already have this player under another alias, skip
-        if last in seen_last:
-            # Prefer the version that appears in data
-            if name in data_names and seen_last[last] not in data_names:
-                canonical_hitters.remove(seen_last[last])
-                seen_last[last] = name
-                canonical_hitters.append(name)
-            continue
-        seen_last[last] = name
-        canonical_hitters.append(name)
-    canonical_hitters = sorted(canonical_hitters)
-    canonical_hitters = [h for h in canonical_hitters
-                         if not _is_removed(h) and not _is_report_hidden(h)]
-
-    # Compute stats for everyone
-    all_stats = {}
-    for name in canonical_hitters:
-        all_stats[name] = compute_batter_stats(name, my_pitches, opp_hand)
-
-    # Compute matchup scores if pitcher selected — pitcher arsenal profile and
-    # league baselines are each computed ONCE and reused for every hitter,
-    # not recomputed per hitter (score_matchup is called once per roster spot).
-    matchup_scores = {}
-    matchup_details = {}
-    matchup_low_sample = {}
-    matchup_xwoba = {}
-    if matchup_pitcher:
-        _lu_pitcher_profile = _lineup_pitcher_profile(matchup_pitcher, df_all)
-        _lu_baselines = _league_pitch_baselines(df_all)
-        for name in canonical_hitters:
-            mscore, mdetails, mlow, mxwoba = score_matchup(name, _lu_pitcher_profile, df_all, _lu_baselines)
-            matchup_scores[name] = mscore
-            matchup_details[name] = mdetails
-            matchup_low_sample[name] = mlow
-            matchup_xwoba[name] = mxwoba
-
-    all_scored = pd.DataFrame(list(all_stats.values()))
-    if matchup_pitcher and matchup_scores:
-        all_scored["MatchupScore"] = all_scored["Batter"].map(matchup_scores).fillna(0)
-        # Matchup-dominant blend when a pitcher is selected — the auto-picked
-        # top 9 needs to actually track projected xwOBA against THIS pitcher,
-        # not just be nudged by it. Season-wide Score stays as a 20% guard
-        # rail so one pitch type's tiny sample can't swing the whole pick.
-        base_max = all_scored["Score"].abs().max() or 1
-        match_max = all_scored["MatchupScore"].abs().max() or 1
-        all_scored["BlendedScore"] = (
-            0.8 * all_scored["MatchupScore"] / match_max +
-            0.2 * all_scored["Score"] / base_max
-        )
-        all_scored = all_scored.sort_values("BlendedScore", ascending=False).reset_index(drop=True)
-    else:
-        all_scored["MatchupScore"] = 0
-        all_scored["BlendedScore"] = all_scored["Score"]
-        all_scored = all_scored.sort_values("Score", ascending=False).reset_index(drop=True)
-
-    #  STEP 1: Select available players
-    st.markdown("#### Step 1 — Mark Available Players Today")
-    st.caption("Check everyone who is available. The app will auto-pick the best 9.")
-
-    if "available" not in st.session_state:
-        st.session_state.available = set()
-
-    sel_cols = st.columns(4)
-    for i, row in all_scored.iterrows():
-        name = row["Batter"]
-        pos  = row["BasPos"]
-        side = row["Side"]
-        label = f"**{player_last(name)}** · {pos} · {side}"
-        checked = name in st.session_state.available
-        if sel_cols[i % 4].checkbox(label, value=checked, key=f"avail_{name}"):
-            st.session_state.available.add(name)
-        else:
-            st.session_state.available.discard(name)
-
-    available_list = [n for n in canonical_hitters if n in st.session_state.available]
-
-    st.divider()
-
-    if len(available_list) < 9:
-        st.warning(f"️ Only {len(available_list)} players available — need at least 9.")
-        st.stop()
-
-    #  Auto-pick best 9 
-    avail_scored = all_scored[all_scored["Batter"].isin(available_list)].copy()
-
-    # If more than 9 available, pick best 9 — but ensure we have at least 1 C
-    # and resolve position conflicts greedily
-    def pick_best_nine(df):
-        # BlendedScore (not the plain season-wide Score) — when a pitcher is
-        # selected this is the matchup-dominant xwOBA-projection blend, so the
-        # auto-pick actually reflects the matchup instead of ignoring it.
-        # BlendedScore == Score when no pitcher is selected, so this is a
-        # no-op for that case.
-        df = df.sort_values("BlendedScore", ascending=False).reset_index(drop=True)
-        selected = []
-        used_unique = set()
-
-        # First pass: greedily pick by score, skip true duplicates at unique spots
-        for _, row in df.iterrows():
-            if len(selected) == 9:
-                break
-            bp = row["BasPos"]
-            # C and 1B are unique; IF/OF can have multiples (different sub-positions)
-            if bp in ("C", "1B"):
-                if bp in used_unique:
-                    # Slot as DH if no DH yet
-                    if "DH" not in used_unique:
-                        used_unique.add("DH")
-                        selected.append(row["Batter"])
-                    continue
-                used_unique.add(bp)
-            selected.append(row["Batter"])
-
-        # If we didn't hit 9 (because too many conflicts), just take top 9 by score
-        if len(selected) < 9:
-            selected = df["Batter"].head(9).tolist()
-
-        return selected
-
-    best_nine = pick_best_nine(avail_scored)
-    starters = avail_scored[avail_scored["Batter"].isin(best_nine)].copy()
-
-    if len(available_list) > 9:
-        benched = avail_scored[~avail_scored["Batter"].isin(best_nine)]["Batter"].tolist()
-        st.info(f"Auto-selected best 9 from {len(available_list)} available. "
-                f"Sitting: {', '.join(player_last(b) for b in benched)}")
-
-    #  STEP 2: Assign defensive positions 
-    st.markdown("#### Step 2 — Assign Defensive Positions")
-    st.caption("Assign each starter a specific position. DH is available to resolve any conflicts.")
-
-    pos_assignments = {}
-    used_positions  = {}
-
-    assign_cols = st.columns(3)
-    for i, row in starters.sort_values("Score", ascending=False).iterrows():
-        name = row["Batter"]
-        bp   = row["BasPos"]
-        opts = POS_OPTIONS.get(bp, ["DH"])
-        col  = assign_cols[list(starters.index).index(i) % 3]
-        default_idx = 0
-        # Load previous assignment if valid
-        prev = st.session_state.get(f"pos_{name}")
-        if prev in opts:
-            default_idx = opts.index(prev)
-        chosen = col.selectbox(
-            f"{player_last(name)}",
-            options=opts,
-            index=default_idx,
-            key=f"pos_{name}"
-        )
-        pos_assignments[name] = chosen
-        used_positions[chosen] = used_positions.get(chosen, 0) + 1
-
-    # Check conflicts
-    conflicts = [p for p, cnt in used_positions.items() if cnt > 1 and p != "DH"]
-    dh_count  = used_positions.get("DH", 0)
-
-    if conflicts:
-        for p in conflicts:
-            dupes = [player_last(n) for n, pos in pos_assignments.items() if pos == p]
-            st.error(f"️ Position conflict at **{p}**: {', '.join(dupes)} — assign one as DH.")
-    if dh_count > 1:
-        st.error(f"️ Only one DH allowed — {dh_count} players assigned as DH.")
-
-    if conflicts or dh_count > 1:
-        st.stop()
-
-    st.divider()
-
-    #  STEP 3: Batting order 
-    starters = starters.sort_values("Score", ascending=False).reset_index(drop=True)
-    starters["DefPos"] = starters["Batter"].map(pos_assignments)
+    # Static example lineup (order, batter, pos, side, obp, ops)
+    _lu_example = [
+        (1, "Callahan, Derek", "OF", "Left",  ".289", ".736"),
+        (2, "Reyes, Julian",   "1B", "Right", ".316", ".763"),
+        (3, "Boyd, Marcus",    "C",  "Right", ".462", "1.156"),
+        (4, "Frost, Adam",     "DH", "Left",  ".257", ".543"),
+        (5, "Brooks, Tyler",   "P",  "Right", ".278", ".543"),
+    ]
 
     lineup_col, scout_col = st.columns([1.1, 1.5])
 
     with lineup_col:
         st.markdown("### Batting Order")
-        if opp_hand:
-            st.caption(f"Optimized vs {'RHP' if opp_hand=='Right' else 'LHP'} · OBP + EV + Platoon")
-        else:
-            st.caption("Optimized by OBP + Exit Velocity")
-
-        for i, row in starters.iterrows():
-            side_color = {"Left":"#3b82f6","Right":"#9ca3af","Switch":"#c084fc"}.get(row["Side"],"#64748b")
-            pos_color  = POS_COLORS.get(row["DefPos"], "#64748b")
-            obp_str    = f"{row['OBP']:.3f}" if pd.notna(row.get("OBP")) else "—"
-            ops_str    = f"{row['OPS']:.3f}" if pd.notna(row.get("OPS")) else "—"
-            official_badge = ("<span style='background:#1e3a5f;color:#60a5fa;"
-                "font-size:0.65rem;padding:1px 5px;border-radius:3px;font-weight:600;'>OFF</span>"
-                if row.get("HasOfficial") else "")
-            platoon_badge = ""
-            if opp_hand and pd.notna(row["PlatoonAdv"]):
-                platoon_badge = (
-                    "<span style='background:#14532d;color:#86efac;font-size:0.7rem;"
-                    "padding:2px 7px;border-radius:99px;font-weight:700;'>ADV</span>"
-                    if row["PlatoonAdv"] else
-                    "<span style='background:#1f2937;color:#6b7280;font-size:0.7rem;"
-                    "padding:2px 7px;border-radius:99px;'>—</span>"
-                )
-            def_pos = row["DefPos"]
-            batter_name = player_last(row["Batter"])
-            side_val = row["Side"]
+        st.caption("Optimized vs RHP · OBP + platoon advantage")
+        for order, batter, pos, side, obp, ops in _lu_example:
+            side_color = {"Left": "#3b82f6", "Right": "#9ca3af"}.get(side, "#64748b")
+            pos_color  = POS_COLORS.get(pos, "#64748b")
             st.markdown(
                 f"<div style='display:flex;align-items:center;gap:10px;"
                 f"background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:8px;"
                 f"padding:10px 14px;margin-bottom:6px;'>"
-                f"<div style='font-size:1.3rem;font-weight:800;color:#64748b;width:24px;'>{i+1}</div>"
+                f"<div style='font-size:1.3rem;font-weight:800;color:#64748b;width:24px;'>{order}</div>"
                 f"<span style='background:#111;color:{pos_color};font-size:0.75rem;"
                 f"padding:2px 7px;border-radius:4px;font-weight:700;min-width:34px;"
-                f"text-align:center;'>{def_pos}</span>"
-                f"<div style='flex:1;font-weight:600;font-size:0.95rem;color:#1e293b;'>{batter_name}</div>"
+                f"text-align:center;'>{pos}</span>"
+                f"<div style='flex:1;font-weight:600;font-size:0.95rem;color:#1e293b;'>{player_last(batter)}</div>"
                 f"<span style='background:#1a2235;color:{side_color};font-size:0.75rem;"
-                f"padding:2px 8px;border-radius:99px;font-weight:700;'>{side_val}</span>"
+                f"padding:2px 8px;border-radius:99px;font-weight:700;'>{side}</span>"
                 f"<span style='background:#0f2d1f;color:#86efac;font-size:0.72rem;"
-                f"padding:2px 7px;border-radius:4px;'>OBP {obp_str}</span>"
+                f"padding:2px 7px;border-radius:4px;'>OBP {obp}</span>"
                 f"<span style='background:#1e3a5f;color:#93c5fd;font-size:0.72rem;"
-                f"padding:2px 7px;border-radius:4px;'>OPS {ops_str}</span>"
-                f"{official_badge}"
-                f"{platoon_badge}"
+                f"padding:2px 7px;border-radius:4px;'>OPS {ops}</span>"
                 f"</div>",
                 unsafe_allow_html=True)
+        st.caption("Frost DHs while Brooks starts on the mound — the two swap roles on days Frost pitches.")
 
     with scout_col:
         st.markdown("### Scout Table")
-
-        def fmt(v, f):
-            return f.format(v) if pd.notna(v) else "—"
-
-        td = starters[["Batter","DefPos","Side","PA","OBP","KPct","BBPct","xBA","AvgEV","HardPct","EV_RHP","EV_LHP","AvgLA"]].copy()
-        td["OBP"]      = td["OBP"].map(lambda v: fmt(v,"{:.3f}"))
-        td["KPct"]     = td["KPct"].map(lambda v: fmt(v*100,"{:.0f}%") if pd.notna(v) else "—")
-        td["BBPct"]    = td["BBPct"].map(lambda v: fmt(v*100,"{:.0f}%") if pd.notna(v) else "—")
-        td["xBA"]      = td["xBA"].map(lambda v: fmt(v,"{:.3f}"))
-        td["AvgEV"]    = td["AvgEV"].map(lambda v: fmt(v,"{:.1f}"))
-        td["HardPct"]  = td["HardPct"].map(lambda v: fmt(v*100,"{:.0f}%") if pd.notna(v) else "—")
-        td["EV_RHP"]   = td["EV_RHP"].map(lambda v: fmt(v,"{:.1f}"))
-        td["EV_LHP"]   = td["EV_LHP"].map(lambda v: fmt(v,"{:.1f}"))
-        td["AvgLA"]    = td["AvgLA"].map(lambda v: fmt(v,"{:.1f}°"))
-        td.columns    = ["Batter","Pos","B","PA","OBP","K%","BB%","xBA","Avg EV","Hard%","EV vs R","EV vs L","Avg LA"]
-        st.dataframe(td, use_container_width=True, height=360)
+        _lu_scout = pd.DataFrame([
+            {"Batter": "Callahan, Derek", "Pos": "OF", "B": "L", "PA": 38, "OBP": ".289",
+             "K%": "34%", "BB%": "0%", "Avg EV": "83.1", "Hard%": "31%"},
+            {"Batter": "Reyes, Julian", "Pos": "1B", "B": "R", "PA": 38, "OBP": ".316",
+             "K%": "42%", "BB%": "0%", "Avg EV": "82.4", "Hard%": "26%"},
+            {"Batter": "Boyd, Marcus", "Pos": "C", "B": "R", "PA": 36, "OBP": ".462",
+             "K%": "36%", "BB%": "8%", "Avg EV": "86.7", "Hard%": "44%"},
+            {"Batter": "Frost, Adam", "Pos": "DH", "B": "L", "PA": 35, "OBP": ".257",
+             "K%": "29%", "BB%": "0%", "Avg EV": "81.0", "Hard%": "23%"},
+            {"Batter": "Brooks, Tyler", "Pos": "P", "B": "R", "PA": 34, "OBP": ".278",
+             "K%": "41%", "BB%": "6%", "Avg EV": "80.6", "Hard%": "21%"},
+        ])
+        st.dataframe(_lu_scout, use_container_width=True, hide_index=True)
 
         st.divider()
-
-        # Matchup breakdown
-        if matchup_pitcher:
-            st.markdown(f"#### Matchup Breakdown — vs {player_last(matchup_pitcher)}")
-            st.caption("Ranked by projected xwOBA against pitches matching this pitcher's actual "
-                      "velocity and movement per pitch type — same approach as the Reliever Matchup "
-                      "Planner, with a tighter similarity window since this is one known opponent. "
-                      "Usage is what he throws to THIS hitter's side specifically (pitchers change "
-                      "their mix by batter handedness), not his overall pooled mix. "
-                      "Orange = fewer than 3 similar-stuff pitches seen on that pitch type.")
-            for i, row in starters.iterrows():
-                name    = row["Batter"]
-                details = matchup_details.get(name, [])
-                is_low  = matchup_low_sample.get(name, False)
-                mxwoba  = matchup_xwoba.get(name)
-
-                if not details:
-                    st.markdown(
-                        f"<div style='background:#F8FAFC;border:1px solid #E2E8F0;"
-                        f"border-radius:6px;padding:8px 14px;margin-bottom:4px;"
-                        f"display:flex;align-items:center;gap:10px;'>"
-                        f"<span style='width:130px;font-weight:600;color:#1e293b;'>"
-                        f"{player_last(name)}</span>"
-                        f"<span style='color:#475569;font-size:0.8rem;'>No pitch type data</span>"
-                        f"</div>", unsafe_allow_html=True)
-                    continue
-
-                # Build pitch pills
-                pills = ""
-                for d in details[:3]:  # top 3 by usage
-                    color = PITCH_COLORS.get(d["pitch"], "#64748b")
-                    border = "#f59e0b" if d["low"] else color
-                    xwoba_color = ("#22c55e" if d["xwoba"] >= 0.55 else
-                                   "#64748b" if d["xwoba"] >= 0.35 else "#ef4444")
-                    warn_icon = "<span style='color:#f59e0b;font-size:0.65rem;'>⚠</span>"
-                    pills += (
-                        f"<span style='background:#111;border:1.5px solid {border};"
-                        f"border-radius:4px;padding:2px 8px;margin-right:4px;"
-                        f"font-size:0.75rem;display:inline-flex;gap:6px;align-items:center;'>"
-                        f"<span style='color:{color};font-weight:700;'>{d['pitch']}</span>"
-                        f"<span style='color:#64748b;'>{d['usage']:.0%}</span>"
-                        f"<span style='color:{xwoba_color};font-weight:700;'>{d['xwoba']:.3f}</span>"
-                        f"{warn_icon if d['low'] else ''}"
-                        f"</span>"
-                    )
-
-                if mxwoba is not None:
-                    xwoba_badge_color = ("#22c55e" if mxwoba >= 0.55 else
-                                         "#ef4444" if mxwoba < 0.35 else "#64748b")
-                    badge = f"xwOBA {mxwoba:.3f}"
-                else:
-                    xwoba_badge_color = "#64748b"
-                    badge = "xwOBA —"
-                st.markdown(
-                    f"<div style='background:#F8FAFC;border:1px solid #E2E8F0;"
-                    f"border-radius:6px;padding:8px 14px;margin-bottom:4px;"
-                    f"display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>"
-                    f"<span style='width:110px;font-weight:600;color:#1e293b;font-size:0.9rem;'>"
-                    f"{player_last(name)}</span>"
-                    f"{pills}"
-                    f"<span style='margin-left:auto;font-size:0.8rem;color:{xwoba_badge_color};"
-                    f"font-weight:700;'>{badge}</span>"
-                    f"</div>", unsafe_allow_html=True)
-
-            st.caption("Format: **Pitch** Usage% xwOBA | Orange border = fewer than 3 similar-stuff "
-                      "pitches seen on that pitch type")
+        st.markdown("#### Matchup Breakdown — vs Delgado, Marcus")
+        st.caption("Ranked by projected xwOBA against his actual pitch mix.")
+        _lu_matchup = [
+            ("Boyd, Marcus",    [("Four-Seam", "56%", "0.612"), ("Curveball", "30%", "0.398")]),
+            ("Reyes, Julian",   [("Four-Seam", "56%", "0.451"), ("Changeup", "15%", "0.512")]),
+            ("Callahan, Derek", [("Four-Seam", "56%", "0.409"), ("Curveball", "30%", "0.360")]),
+            ("Frost, Adam",     [("Four-Seam", "56%", "0.388"), ("Curveball", "30%", "0.340")]),
+            ("Brooks, Tyler",   [("Four-Seam", "56%", "0.352"), ("Curveball", "30%", "0.301")]),
+        ]
+        for name, pitches in _lu_matchup:
+            pills = ""
+            for pitch, usage, xwoba in pitches:
+                color = PITCH_COLORS.get(pitch, "#64748b")
+                xwoba_color = ("#22c55e" if float(xwoba) >= 0.55 else
+                               "#64748b" if float(xwoba) >= 0.35 else "#ef4444")
+                pills += (
+                    f"<span style='background:#111;border:1.5px solid {color};"
+                    f"border-radius:4px;padding:2px 8px;margin-right:4px;"
+                    f"font-size:0.75rem;display:inline-flex;gap:6px;align-items:center;'>"
+                    f"<span style='color:{color};font-weight:700;'>{pitch}</span>"
+                    f"<span style='color:#64748b;'>{usage}</span>"
+                    f"<span style='color:{xwoba_color};font-weight:700;'>{xwoba}</span>"
+                    f"</span>"
+                )
+            st.markdown(
+                f"<div style='background:#F8FAFC;border:1px solid #E2E8F0;"
+                f"border-radius:6px;padding:8px 14px;margin-bottom:4px;"
+                f"display:flex;align-items:center;gap:10px;flex-wrap:wrap;'>"
+                f"<span style='width:110px;font-weight:600;color:#1e293b;font-size:0.9rem;'>"
+                f"{player_last(name)}</span>{pills}</div>", unsafe_allow_html=True)
+        st.caption("Format: **Pitch** Usage% xwOBA")
 
         st.divider()
         if st.button("Export Lineup Card", use_container_width=True):
-            lines = [
-                "BROOKHAVEN BANDITS — LINEUP CARD",
-                f"Vs {'RHP' if opp_hand=='Right' else 'LHP' if opp_hand=='Left' else 'Unknown Pitcher'}",
-                "" * 46
-            ]
-            for i, row in starters.iterrows():
-                ev_str = f"{row['AvgEV']:.1f}" if pd.notna(row["AvgEV"]) else "—"
-                k_str  = f"{row['KPct']*100:.0f}%" if pd.notna(row['KPct']) else "—"
-                bb_str = f"{row['BBPct']*100:.0f}%" if pd.notna(row['BBPct']) else "—"
-                lines.append(
-                    f"{i+1:2}.  {row['DefPos']:<4} {player_last(row['Batter']):<18} "
-                    f"{row['Side']}  OBP:{row['OBP']:.3f}  K%:{k_str}  BB%:{bb_str}  EV:{ev_str}"
-                )
+            lines = ["BROOKHAVEN BANDITS — LINEUP CARD", "Vs RHP (Delgado, Marcus)", "-" * 46]
+            for order, batter, pos, side, obp, ops in _lu_example:
+                lines.append(f"{order:2}.  {pos:<4} {player_last(batter):<18} {side}  OBP:{obp}  OPS:{ops}")
             st.code("\n".join(lines), language=None)
             st.caption("Copy or Ctrl+P to print.")
+
 
 # ─────────────────────────────────────────
 #  PAGE: RETURNER BOARD (FCBL cross-league bring-back board)
@@ -6709,354 +6432,59 @@ elif page == "Bullpen Script":
 # ─────────────────────────────────────────
 elif page == "Next Hitters":
     st.title("Next Hitters — Attack Plan")
-    st.caption("The next hitters due up in the opponent's lineup and how to attack each one.")
+    st.caption("Example attack plan — a fixed sample opponent lineup, not tonight's actual lineup.")
 
-    # Opponent team
-    opp_teams = sorted([t for t in _team_options(df_all["BatterTeam"]) if t != MY_TEAM])
-    nh_team = st.selectbox("Opponent", options=opp_teams, format_func=team_label, key="nh_team")
-    team_hitters = _player_options(df_all[df_all["BatterTeam"] == nh_team]["Batter"])
+    st.markdown("#### Opponent: Concord River Cats")
+    st.caption("Batting order: 1. Marsh, Eli (OF, L)  2. Sorensen, Blake (1B, R)  "
+               "3. Doyle, Hunter (C, R)  4. Dunmore, Chris (DH, L)  5. Delgado, Marcus (P, R)")
 
-    st.markdown("#### Set the lineup (1–9 in batting order)")
-    st.caption("Choose each spot. Leave unused spots blank.")
-    lineup = []
-    lc = st.columns(3)
-    for i in range(9):
-        with lc[i % 3]:
-            pick = st.selectbox(f"{i+1}.", options=[""] + team_hitters,
-                                format_func=lambda b: player_last(b) if b else "—",
-                                key=f"nh_spot_{i}")
-            if pick:
-                lineup.append(pick)
+    st.divider()
+    st.markdown("### Due up: next 3")
 
-    if len(lineup) < 3:
-        st.info("Add at least 3 hitters to the lineup.")
-    else:
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            up_now = st.number_input("Batting now (order #)", min_value=1,
-                                     max_value=len(lineup), value=1, key="nh_up")
-        with c2:
-            n_show = st.slider("How many to show", 3, len(lineup), len(lineup), key="nh_n")
-        with c3:
-            nh_hand = st.selectbox("vs. Pitcher Hand", options=["All", "Right", "Left"],
-                                   format_func=lambda x: {"All": "All", "Right": "vs RHP",
-                                                           "Left": "vs LHP"}[x],
-                                   key="nh_hand")
+    _nh_example = [
+        dict(order=1, name="Marsh, Eli", side="Left", n_seen=38,
+             ops=".736", xwoba=".318", k="34%", bb="0%", zsw="62%", osw="22%",
+             pitches=[("Four-Seam", 61, ".263", "18%"), ("Slider", 26, ".200", "35%"),
+                      ("Changeup", 13, ".333", "10%")],
+             attack=["Best swing-and-miss pitch: **Slider** (35% whiff)",
+                     "Struggles vs **Slider** (BA .200)",
+                     "Disciplined (22% chase) — must throw strikes"]),
+        dict(order=2, name="Sorensen, Blake", side="Right", n_seen=36,
+             ops=".980", xwoba=".410", k="28%", bb="11%", zsw="68%", osw="33%",
+             pitches=[("Four-Seam", 55, ".440", "8%"), ("Curveball", 30, ".300", "20%"),
+                      ("Changeup", 15, ".250", "15%")],
+             attack=["⚠ Avoid **Four-Seam** — hits it hard (BA .440)",
+                     "Best swing-and-miss pitch: **Curveball** (20% whiff)",
+                     "Chases out of zone (33%) — expand when ahead"]),
+        dict(order=3, name="Doyle, Hunter", side="Right", n_seen=40,
+             ops=".820", xwoba=".350", k="25%", bb="5%", zsw="59%", osw="19%",
+             pitches=[("Four-Seam", 62, ".280", "15%"), ("Slider", 38, ".190", "30%")],
+             attack=["Best swing-and-miss pitch: **Slider** (30% whiff)",
+                     "Struggles vs **Slider** (BA .190)",
+                     "Disciplined (19% chase) — must throw strikes"]),
+    ]
 
-        # Next hitters due up, rolling through the order
-        start = up_now - 1
-        due = [lineup[(start + k) % len(lineup)] for k in range(n_show)]
+    for d in _nh_example:
+        with st.container(border=True):
+            st.markdown(f"**{d['order']}. {player_last(d['name'])}**  ·  bats {d['side']}  ·  "
+                        f"{d['n_seen']} pitches seen (all pitchers)")
+            nm = st.columns(4)
+            nm[0].metric("OPS", d["ops"])
+            nm[1].metric("xwOBA", d["xwoba"])
+            nm[2].metric("K%", d["k"])
+            nm[3].metric("BB%", d["bb"])
+            nz = st.columns(2)
+            nz[0].metric("Z-Swing%", d["zsw"], help="Swings at pitches in the zone")
+            nz[1].metric("O-Swing% (chase)", d["osw"], help="Swings at pitches out of the zone")
 
-        st.divider()
-        st.markdown(f"### Due up: next {n_show}")
+            pt_df = pd.DataFrame(d["pitches"], columns=["Pitch", "Seen", "BA", "Whiff%"])
+            st.dataframe(pt_df, use_container_width=True, hide_index=True)
+            st.markdown("**Attack:** " + "  ·  ".join(d["attack"]))
 
-        HALF = 0.83
+            st.markdown("**Optimal Shift**")
+            st.caption("Standard alignment — example only.")
+            components.html(_field_svg(_STANDARD_FIELD_POS, title=""), height=250)
 
-        def _nh_compute(hitter, hand_filter):
-            """Contact/whiff stats, per-pitch-type breakdown, auto attack notes,
-            and recommended shift for one hitter, scoped to hand_filter."""
-            bp_all = df_all[df_all["Batter"] == hitter]
-            bp = bp_all if hand_filter == "All" else bp_all[bp_all["PitcherThrows"] == hand_filter]
-            side = bp_all["BatterSide"].mode().iloc[0] if len(bp_all["BatterSide"].mode()) else "?"
-            n_seen = len(bp)
-            nh_stats = compute_batter_stats(hitter, bp, hand_filter if hand_filter != "All" else None)
-            nh_haz = _attack_zone_frame(bp)
-            nh_z_sw, nh_o_sw, nh_n_in, nh_n_out = _true_zone_swing(nh_haz)
-
-            rows = []
-            for pt in bp["PitchType"].dropna().value_counts().index:
-                sub = bp[bp["PitchType"] == pt]
-                if len(sub) < 4:
-                    continue
-                ab = int((_ab_mask(sub)).sum())
-                h = int(sub["PlayResult"].isin(["Single","Double","Triple","HomeRun"]).sum())
-                sw = int(sub["PitchCall"].isin(["StrikeSwinging","FoulBallNotFieldable","FoulBallFieldable","InPlay"]).sum())
-                wh = int((sub["PitchCall"] == "StrikeSwinging").sum())
-                ba = h/ab if ab >= 3 else None
-                whp = wh/sw if sw > 0 else None
-                rows.append({"Pitch": pt, "Seen": len(sub),
-                             "BA": f"{ba:.3f}" if ba is not None else "—",
-                             "Whiff%": f"{100*whp:.0f}%" if whp is not None else "—",
-                             "_ba": ba if ba is not None else 99,
-                             "_wh": whp if whp is not None else -1})
-
-            attack = []
-            if rows:
-                best_whiff = max(rows, key=lambda r: r["_wh"])
-                if best_whiff["_wh"] > 0.25:
-                    attack.append(f"Best swing-and-miss pitch: **{best_whiff['Pitch']}** "
-                                  f"({best_whiff['Whiff%']} whiff)")
-                weakest = min(rows, key=lambda r: r["_ba"])
-                if weakest["_ba"] < 0.250:
-                    attack.append(f"Struggles vs **{weakest['Pitch']}** (BA {weakest['BA']})")
-                strongest = max((r for r in rows if r["_ba"] < 99), key=lambda r: r["_ba"], default=None)
-                if strongest and strongest["_ba"] >= 0.300:
-                    attack.append(f"⚠ Avoid **{strongest['Pitch']}** — hits it hard (BA {strongest['BA']})")
-
-                oz = bp[(bp["PlateLocSide"].abs() > HALF) | (~bp["PlateLocHeight"].between(1.5, 3.5))]
-                oz = oz[oz["PlateLocSide"].notna()]
-                if len(oz) >= 10:
-                    oz_sw = int(oz["PitchCall"].isin(["StrikeSwinging","FoulBallNotFieldable","FoulBallFieldable","InPlay"]).sum())
-                    chase = 100 * oz_sw / len(oz)
-                    if chase >= 30:
-                        attack.append(f"Chases out of zone ({chase:.0f}%) — expand when ahead")
-                    elif chase <= 18:
-                        attack.append(f"Disciplined ({chase:.0f}% chase) — must throw strikes")
-
-            shift_pos, shift_n = _shift_positions(bp, side)
-            return dict(bp=bp, side=side, n_seen=n_seen, nh_stats=nh_stats,
-                        nh_z_sw=nh_z_sw, nh_o_sw=nh_o_sw, rows=rows, attack=attack,
-                        shift_pos=shift_pos, shift_n=shift_n)
-
-        def _nh_export_card_html(order_label, hitter, d):
-            pt_rows_html = "".join(
-                f"<tr><td>{r['Pitch']}</td><td>{r['Seen']}</td><td>{r['BA']}</td><td>{r['Whiff%']}</td></tr>"
-                for r in d["rows"]
-            ) if d["rows"] else "<tr><td colspan='4' style='color:#64748b;'>Not enough pitch-type data.</td></tr>"
-            attack_html = ("<p class=\"note\">" + "  &middot;  ".join(
-                a.replace("**", "") for a in d["attack"]) + "</p>") if d["attack"] else ""
-            nh_stats = d["nh_stats"]
-            return f"""
-                <div class="card">
-                  <h3>{order_label}. {player_last(hitter)} <span class="muted">&middot; bats {d['side']} &middot; {d['n_seen']}p</span></h3>
-                  <div class="metrics">
-                    <div class="m"><span class="l">OPS</span><span class="v">{f"{nh_stats['OPS']:.3f}" if pd.notna(nh_stats.get('OPS')) else "—"}</span></div>
-                    <div class="m"><span class="l">xwOBA</span><span class="v">{f"{nh_stats['xwOBA']:.3f}" if nh_stats.get('xwOBA') is not None else "—"}</span></div>
-                    <div class="m"><span class="l">K%</span><span class="v">{f"{nh_stats['KPct']*100:.0f}%" if pd.notna(nh_stats.get('KPct')) else "—"}</span></div>
-                    <div class="m"><span class="l">BB%</span><span class="v">{f"{nh_stats['BBPct']*100:.0f}%" if pd.notna(nh_stats.get('BBPct')) else "—"}</span></div>
-                    <div class="m"><span class="l">Z-Sw%</span><span class="v">{d['nh_z_sw']:.0f}%</span></div>
-                    <div class="m"><span class="l">O-Sw%</span><span class="v">{d['nh_o_sw']:.0f}%</span></div>
-                  </div>
-                  <table class="pt">
-                    <thead><tr><th>Pitch</th><th>Seen</th><th>BA</th><th>Wh%</th></tr></thead>
-                    <tbody>{pt_rows_html}</tbody>
-                  </table>
-                  {attack_html}
-                </div>"""
-
-        def _nh_shift_card_html(order_label, hitter, d):
-            shift_note = ("Standard alignment — not enough balls in play yet." if d["shift_n"] < 8
-                          else f"Shaded to spray tendency &middot; {d['shift_n']} BIP")
-            return f"""
-                <div class="fcard">
-                  <h4>{order_label}. {player_last(hitter)} <span class="muted">&middot; bats {d['side']}</span></h4>
-                  {_field_svg(d['shift_pos'], title="", width=200)}
-                  <p class="fnote">{shift_note}</p>
-                </div>"""
-
-        for idx, hitter in enumerate(due):
-            bp_all = df_all[df_all["Batter"] == hitter]
-            bp = bp_all if nh_hand == "All" else bp_all[bp_all["PitcherThrows"] == nh_hand]
-            order_pos = (start + idx) % len(lineup) + 1
-            side = bp_all["BatterSide"].mode().iloc[0] if len(bp_all["BatterSide"].mode()) else "?"
-            n_seen = len(bp)
-            hand_label = {"All": "all pitchers", "Right": "vs RHP", "Left": "vs LHP"}[nh_hand]
-
-            with st.container(border=True):
-                st.markdown(f"**{order_pos}. {player_last(hitter)}**  ·  bats {side}  ·  "
-                            f"{n_seen} pitches seen ({hand_label})")
-                if n_seen < 10:
-                    st.caption("⚠ Limited data on this hitter — read with caution.")
-
-                nh_stats = compute_batter_stats(hitter, bp, nh_hand if nh_hand != "All" else None)
-                nm = st.columns(4)
-                nm[0].metric("OPS", f"{nh_stats['OPS']:.3f}" if pd.notna(nh_stats.get('OPS')) else "—")
-                nm[1].metric("xwOBA", f"{nh_stats['xwOBA']:.3f}" if nh_stats.get('xwOBA') is not None else "—")
-                nm[2].metric("K%", f"{nh_stats['KPct']*100:.0f}%" if pd.notna(nh_stats.get('KPct')) else "—")
-                nm[3].metric("BB%", f"{nh_stats['BBPct']*100:.0f}%" if pd.notna(nh_stats.get('BBPct')) else "—")
-
-                nh_haz = _attack_zone_frame(bp)
-                nh_z_sw, nh_o_sw, nh_n_in, nh_n_out = _true_zone_swing(nh_haz)
-                nz = st.columns(2)
-                nz[0].metric("Z-Swing%", f"{nh_z_sw:.0f}%", help=f"Swings at pitches in the zone (n={nh_n_in})")
-                nz[1].metric("O-Swing% (chase)", f"{nh_o_sw:.0f}%", help=f"Swings at pitches out of the zone (n={nh_n_out})")
-
-                # Per-pitch-type BA + whiff
-                rows = []
-                for pt in bp["PitchType"].dropna().value_counts().index:
-                    sub = bp[bp["PitchType"] == pt]
-                    if len(sub) < 4:
-                        continue
-                    ab = int((_ab_mask(sub)).sum())
-                    h = int(sub["PlayResult"].isin(["Single","Double","Triple","HomeRun"]).sum())
-                    sw = int(sub["PitchCall"].isin(["StrikeSwinging","FoulBallNotFieldable","FoulBallFieldable","InPlay"]).sum())
-                    wh = int((sub["PitchCall"] == "StrikeSwinging").sum())
-                    ba = h/ab if ab >= 3 else None
-                    whp = wh/sw if sw > 0 else None
-                    rows.append({"Pitch": pt, "Seen": len(sub),
-                                 "BA": f"{ba:.3f}" if ba is not None else "—",
-                                 "Whiff%": f"{100*whp:.0f}%" if whp is not None else "—",
-                                 "_ba": ba if ba is not None else 99,
-                                 "_wh": whp if whp is not None else -1})
-                attack = []
-                if rows:
-                    rdf = pd.DataFrame(rows)
-                    st.dataframe(rdf[["Pitch","Seen","BA","Whiff%"]],
-                                 use_container_width=True, hide_index=True)
-
-                    # Auto attack plan: best whiff pitch + lowest-BA pitch + chase
-                    best_whiff = max(rows, key=lambda r: r["_wh"])
-                    if best_whiff["_wh"] > 0.25:
-                        attack.append(f"Best swing-and-miss pitch: **{best_whiff['Pitch']}** "
-                                      f"({best_whiff['Whiff%']} whiff)")
-                    weakest = min(rows, key=lambda r: r["_ba"])
-                    if weakest["_ba"] < 0.250:
-                        attack.append(f"Struggles vs **{weakest['Pitch']}** (BA {weakest['BA']})")
-                    strongest = max((r for r in rows if r["_ba"] < 99), key=lambda r: r["_ba"], default=None)
-                    if strongest and strongest["_ba"] >= 0.300:
-                        attack.append(f"⚠ Avoid **{strongest['Pitch']}** — hits it hard (BA {strongest['BA']})")
-
-                    # Chase rate
-                    oz = bp[(bp["PlateLocSide"].abs() > HALF) | (~bp["PlateLocHeight"].between(1.5, 3.5))]
-                    oz = oz[oz["PlateLocSide"].notna()]
-                    if len(oz) >= 10:
-                        oz_sw = int(oz["PitchCall"].isin(["StrikeSwinging","FoulBallNotFieldable","FoulBallFieldable","InPlay"]).sum())
-                        chase = 100 * oz_sw / len(oz)
-                        if chase >= 30:
-                            attack.append(f"Chases out of zone ({chase:.0f}%) — expand when ahead")
-                        elif chase <= 18:
-                            attack.append(f"Disciplined ({chase:.0f}% chase) — must throw strikes")
-
-                    if attack:
-                        st.markdown("**Attack:** " + "  ·  ".join(attack))
-                else:
-                    st.caption("Not enough pitch-type data to build an attack plan.")
-
-                # ── Heat zones: same KDE hot/cold heatmaps as Batter Analysis ──
-                bp_z = bp.copy()
-                for _c in ["ExitSpeed", "Angle", "PlateLocSide", "PlateLocHeight"]:
-                    bp_z[_c] = pd.to_numeric(bp_z[_c], errors="coerce")
-                located = bp_z[bp_z["PlateLocSide"].notna() & bp_z["PlateLocHeight"].notna()]
-                if len(located) >= 5:
-                    st.markdown("**Strike Zone — Hot / Cold (overall)**")
-                    nz1, nz2 = st.columns(2)
-                    with nz1:
-                        st.markdown(
-                            "<div style='font-size:0.85rem;font-weight:700;color:#475569;'>"
-                            "Contact Quality</div><div style='font-size:0.72rem;color:#64748b;"
-                            "margin-bottom:6px;'>Red/white = hard contact zones</div>",
-                            unsafe_allow_html=True)
-                        _render_kde_heatmap(bp_z, weight_col="ExitSpeed", key_suffix=f"nh_ev_{idx}_{hitter}")
-                    with nz2:
-                        st.markdown(
-                            "<div style='font-size:0.85rem;font-weight:700;color:#475569;'>"
-                            "Whiff Zones</div><div style='font-size:0.72rem;color:#64748b;"
-                            "margin-bottom:6px;'>Red/white = where he whiffs most</div>",
-                            unsafe_allow_html=True)
-                        _sw_nh = bp_z[bp_z["PitchCall"].isin(
-                            {"StrikeSwinging", "InPlay", "FoulBallNotFieldable",
-                             "FoulBallFieldable", "FoulTip", "FoulBall"})].copy()
-                        _sw_nh["_whiff_weight"] = _sw_nh["PitchCall"].eq("StrikeSwinging").astype(float)
-                        if len(_sw_nh) >= 5:
-                            _render_kde_heatmap(_sw_nh, weight_col="_whiff_weight", key_suffix=f"nh_wh_{idx}_{hitter}")
-                        else:
-                            st.info("Not enough swings for whiff map.")
-                else:
-                    st.caption(f"Only {len(located)} located pitches — too few for a heat map yet.")
-
-                # ── Optimal shift — recommended alignment from his spray ──
-                shift_pos, shift_n = _shift_positions(bp, side)
-                st.markdown("**Optimal Shift**")
-                if shift_n < 8:
-                    st.caption(f"Only {shift_n} balls in play — showing standard alignment.")
-                else:
-                    st.caption(f"Shaded toward his real pull tendency ({shift_n} balls in play). "
-                               "Directional guidance from spray data, not a guarantee.")
-                components.html(_field_svg(shift_pos, title=""), height=250)
-
-        # ── Export the full lineup + rest of roster as a standalone,
-        # print-ready HTML snapshot — the entered lineup on its own sheet(s),
-        # then a page break, then every other rostered hitter on the same
-        # nh_hand filter. Independent of the "due up" rolling window above:
-        # this always covers the whole lineup and the whole bench. ──
-        st.divider()
-        st.markdown("#### Save This Report")
-        nh_hand_label = {"All": "All Pitchers", "Right": "vs RHP", "Left": "vs LHP"}[nh_hand]
-        st.caption(f"Builds a static scouting sheet — filtered to {nh_hand_label} — with the "
-                   "entered lineup (in batting order) on the first sheet, then every other "
-                   "hitter on the roster on a separate sheet. Open it in another tab and it "
-                   "stays put even as you keep changing filters here. Turn on \"Two-sided\" in "
-                   "your browser's print dialog for a double-sided printout (that toggle lives "
-                   "in the printer settings, not something a web page can switch on for you).")
-
-        bench = sorted([b for b in team_hitters if b not in lineup], key=player_last)
-
-        lineup_cards, lineup_shifts = [], []
-        for i, h in enumerate(lineup):
-            d = _nh_compute(h, nh_hand)
-            lineup_cards.append(_nh_export_card_html(str(i + 1), h, d))
-            lineup_shifts.append(_nh_shift_card_html(str(i + 1), h, d))
-
-        bench_cards, bench_shifts = [], []
-        for h in bench:
-            d = _nh_compute(h, nh_hand)
-            bench_cards.append(_nh_export_card_html("—", h, d))
-            bench_shifts.append(_nh_shift_card_html("—", h, d))
-
-        _export_doc = f"""<!doctype html><html><head><meta charset="utf-8">
-        <title>Next Hitters — {team_label(nh_team)}</title>
-        <style>
-        @page {{ size: letter; margin: 0.35in; }}
-        body{{font-family:-apple-system,'Segoe UI',sans-serif;background:#fff;color:#1e293b;
-             margin:0 auto;padding:14px;}}
-        h1{{border-bottom:3px solid #C8102E;padding-bottom:5px;font-size:1.25rem;margin:0 0 3px 0;}}
-        .muted{{color:#64748b;font-weight:400;font-size:0.72rem;}}
-        p.top{{margin:0 0 10px 0;color:#64748b;font-size:0.75rem;}}
-        .cards{{display:grid;grid-template-columns:1fr 1fr;gap:8px;}}
-        .card{{border:1px solid #E2E8F0;border-radius:6px;padding:7px 9px;
-             break-inside:avoid;page-break-inside:avoid;}}
-        .card h3{{font-size:0.8rem;margin:0 0 4px 0;}}
-        .metrics{{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}}
-        .m{{border:1px solid #E2E8F0;border-left:2px solid #C8102E;border-radius:4px;
-            padding:1px 5px;display:flex;gap:4px;align-items:baseline;}}
-        .m .l{{font-size:0.55rem;color:#64748b;text-transform:uppercase;letter-spacing:.02em;}}
-        .m .v{{font-size:0.72rem;font-weight:700;}}
-        table.pt{{border-collapse:collapse;width:100%;margin-bottom:4px;}}
-        table.pt th, table.pt td{{border:1px solid #E2E8F0;padding:1px 4px;text-align:left;
-             font-size:0.62rem;}}
-        table.pt th{{background:#F1F5F9;color:#475569;}}
-        p.note{{margin:0;font-size:0.65rem;color:#334155;}}
-        .sheet{{page-break-before:always;}}
-        .fields{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}}
-        .fcard{{border:1px solid #E2E8F0;border-radius:6px;padding:6px;text-align:center;
-             break-inside:avoid;page-break-inside:avoid;}}
-        .fcard h4{{font-size:0.72rem;margin:0 0 2px 0;}}
-        p.fnote{{margin:2px 0 0 0;font-size:0.6rem;color:#64748b;}}
-        @media print {{ a[href]{{ color:#1e293b; text-decoration:none; }} }}
-        </style></head><body>
-        <h1>Next Hitters — {team_label(nh_team)}</h1>
-        <p class="top">Saved snapshot &middot; {nh_hand_label} &middot; {len(lineup)} in lineup</p>
-        <div class="cards">{"".join(lineup_cards)}</div>
-        <div class="sheet">
-          <h1>Optimal Shift — Starting Lineup</h1>
-          <p class="top">Recommended alignment per hitter, shaded from real spray tendency.
-             Directional guidance, not a guarantee — verify with your own eyes before moving anyone.</p>
-          <div class="fields">{"".join(lineup_shifts)}</div>
-        </div>
-        <div class="sheet">
-          <h1>Rest of Roster — {team_label(nh_team)}</h1>
-          <p class="top">Saved snapshot &middot; {nh_hand_label} &middot; {len(bench)} not in the entered lineup</p>
-          <div class="cards">{"".join(bench_cards) if bench_cards else '<p class="top">Every rostered hitter is already in the lineup.</p>'}</div>
-        </div>
-        <div class="sheet">
-          <h1>Optimal Shift — Rest of Roster</h1>
-          <div class="fields">{"".join(bench_shifts)}</div>
-        </div>
-        </body></html>"""
-        import base64 as _b64
-        _b64_doc = _b64.b64encode(_export_doc.encode("utf-8")).decode("ascii")
-        ec1, ec2 = st.columns(2)
-        with ec1:
-            st.markdown(
-                f'<a href="data:text/html;base64,{_b64_doc}" target="_blank" '
-                f'style="display:inline-block;padding:0.5rem 1rem;border:1px solid #E2E8F0;'
-                f'border-radius:5px;background:#F1F5F9;color:#1e293b;text-decoration:none;'
-                f'font-weight:600;">⧉ Open snapshot in new tab</a>',
-                unsafe_allow_html=True)
-        with ec2:
-            st.download_button("⬇ Download snapshot (.html)", data=_export_doc,
-                               file_name=f"next_hitters_{nh_team}.html", mime="text/html",
-                               key="nh_export_dl")
 
 
 # ─────────────────────────────────────────
