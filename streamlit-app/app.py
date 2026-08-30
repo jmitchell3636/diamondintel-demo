@@ -1,4 +1,3 @@
-import catcher_splits_page
 import returner_board_page
 import streamlit as st
 import streamlit.components.v1 as components
@@ -1223,18 +1222,16 @@ with st.sidebar:
                      "Pitch Design", "Movement Plots", "Pitch Run Values", "3D Trajectories",
                      "Catcher Report", "Trends", "Bullpen Script", "Starters vs Bullpen"],
         "Matchups": ["Matchup Tool", "Game Plan", "Lineup Builder",
-                     "Next Hitters", "Attack Plan (Beta)", "Bullpen", "Reliever Matchups","Catcher Splits",
+                     "Next Hitters", "Attack Plan (Beta)", "Bullpen", "Reliever Matchups",
                      "Pitcher vs Team"],
         "League": ["Report Generator", "Season Report", "League Rankings",
-                   "OPS+ Leaderboard", "Player WAR", "Defensive Positioning",
-                   "Team Totals"],
+                   "OPS+ Leaderboard", "Player WAR"],
         "Front Office": ["Returner Board"],
     }
     NAV_DISPLAY_NAMES = {
         "Report Generator": "Printable Scouting Sheet",
         "Season Report": "End-of-Season Player Report",
         "League Rankings": "League Pitching Rankings",
-        "Team Totals": "Season Totals by Opponent",
         "Attack Plan (Beta)": "Attack Plan",
         "Bullpen": "Bullpen Availability",
     }
@@ -3575,11 +3572,6 @@ elif page == "Lineup Builder":
             st.code("\n".join(lines), language=None)
             st.caption("Copy or Ctrl+P to print.")
 
-# CATCHER SPLITS ###
-
-elif page == "Catcher Splits":
-    catcher_splits_page.render()
-
 # ─────────────────────────────────────────
 #  PAGE: RETURNER BOARD (FCBL cross-league bring-back board)
 # ─────────────────────────────────────────
@@ -3790,9 +3782,7 @@ elif page == "Player Report":
 
 elif page == "Hitter Stat Lines":
     st.title("Hitter Stat Lines")
-    st.caption("Full scouting stat line for every hitter. Data-derived from TrackMan. "
-               "Baserunner-dependent splits (RISP, runners on, LOB) aren't in the data, so "
-               "they're replaced with reliable ones (2-out, leadoff, by-count discipline).")
+    st.caption("Season stat line for every hitter, including 2-out, leadoff, and count-discipline splits.")
 
     hsl_team = st.selectbox("Team", options=sorted(_team_options(df_all["BatterTeam"])),
                             index=(sorted(_team_options(df_all["BatterTeam"])).index(MY_TEAM)
@@ -3896,9 +3886,7 @@ elif page == "Hitter Stat Lines":
 # ─────────────────────────────────────────
 elif page == "Pitcher Stat Lines":
     st.title("Pitcher Stat Lines")
-    st.caption("Full scouting stat line for every pitcher. Data-derived from TrackMan — "
-               "'Runs' is total runs (earned/unearned can't be separated); '2 outs' replaces "
-               "runners-on-base since base state isn't in the data.")
+    st.caption("Season stat line for every pitcher, including runs allowed and 2-out splits.")
 
     psl_team = st.selectbox("Team", options=sorted(_team_options(df_all["PitcherTeam"])),
                             index=(sorted(_team_options(df_all["PitcherTeam"])).index(MY_TEAM)
@@ -3973,9 +3961,7 @@ elif page == "Pitcher Stat Lines":
 # ─────────────────────────────────────────
 elif page == "Hot / Cold":
     st.title("Hot / Cold Tracker")
-    st.caption("Who's trending up or down. Two honest signals: (1) recent contact-quality trend "
-               "vs earlier, and (2) results running ahead of or behind expected (luck). Short-season "
-               "samples are small — read as a nudge, not gospel.")
+    st.caption("Recent contact-quality trend vs. earlier in the season, and results relative to expected outcomes.")
 
     hc_side = st.radio("View", ["Hitters", "Pitchers"], horizontal=True, key="hc_side")
     _hc_teams = (sorted(_team_options(df_all["BatterTeam"])) if hc_side == "Hitters"
@@ -4079,9 +4065,7 @@ elif page == "Hot / Cold":
 # ─────────────────────────────────────────
 elif page == "Game Plan":
     st.title("Pre-Game Game Plan")
-    st.caption("Pick tonight's opposing starter — this assembles a one-sheet: his profile & "
-               "tendencies, your optimal lineup against his hand, and each hitter's attack plan "
-               "vs his arsenal. Built on pitch-type matchups (works even if you've never faced him).")
+    st.caption("Opposing starter's profile and tendencies, your optimal lineup against him, and each hitter's attack plan.")
 
     _gp_teams = sorted([t for t in _team_options(df_all["PitcherTeam"]) if t != MY_TEAM])
     gp_team = st.selectbox("Opponent", options=_gp_teams, format_func=team_label, key="gp_team")
@@ -4566,9 +4550,7 @@ elif page == "Matchup Tool":
 # ─────────────────────────────────────────
 elif page == "Attack Plan (Beta)":
     st.title("Attack Plan")
-    st.caption("Pick one pitcher and one hitter. Builds a model-driven attack plan for both "
-               "sides: what the pitcher should throw — and in what sequence — to get this hitter "
-               "out, and how the hitter should approach this specific arsenal.")
+    st.caption("Pitch selection and sequencing plan for a chosen pitcher-hitter matchup.")
 
     import matchup_model as mm
 
@@ -4811,10 +4793,7 @@ elif page == "Pitcher Scouting" or page == "Pitcher vs Team":
 
     if pvt_mode:
         st.title("Pitcher vs Team")
-        st.caption("A pitcher's full scouting report, scoped to what he actually threw against "
-                   "one opponent — plus how each of their hitters has done against him. Hasn't "
-                   "faced the team yet? Pick \"Whole Season\" to scout him off everything he's "
-                   "thrown all year, split by RHH/LHH instead.")
+        st.caption("A pitcher's scouting report against one opponent, plus how each of their hitters has done against him.")
 
         all_pitchers_pvt = sorted(_player_options(df_all["Pitcher"]))
         col1, col2 = st.columns([1.6, 1.4])
@@ -6465,8 +6444,7 @@ elif page == "Pitcher Scouting" or page == "Pitcher vs Team":
 # ─────────────────────────────────────────
 elif page == "Pitch Design":
     st.title("Pitch Design — Tunneling & Mix")
-    st.caption("How well a pitcher's offerings tunnel (look alike out of the hand, break apart late) "
-               "and whether his best pitches are used enough. Directional guidance, not exact usage %.")
+    st.caption("How well a pitcher's offerings tunnel out of the hand, and his pitch usage mix.")
 
     from itertools import combinations
     pd_teams = sorted(_team_options(df_all["PitcherTeam"]))
@@ -6588,9 +6566,7 @@ elif page == "Pitch Design":
 # ─────────────────────────────────────────
 elif page == "Bullpen Script":
     st.title("Bullpen Script")
-    st.caption("Turns a pitcher's tunneling and usage profile into an actual bullpen session plan — "
-               "which pitch pairs to drill, how many reps, and why. Development-focused, not a "
-               "game plan (see Game Plan / Attack Plan for opponent-specific sequencing).")
+    st.caption("A bullpen session plan — pitch pairs to drill and how many reps — from a pitcher's tunneling and usage profile.")
 
     from itertools import combinations
     bs_teams = sorted(_team_options(df_all["PitcherTeam"]))
@@ -6733,9 +6709,7 @@ elif page == "Bullpen Script":
 # ─────────────────────────────────────────
 elif page == "Next Hitters":
     st.title("Next Hitters — Attack Plan")
-    st.caption("Pick the opponent and their lineup order, set who's up, and see the next "
-               "hitters due up with how to attack each one. (Manual entry now; live-feed "
-               "auto-fill can be added when a data URL is available.)")
+    st.caption("The next hitters due up in the opponent's lineup and how to attack each one.")
 
     # Opponent team
     opp_teams = sorted([t for t in _team_options(df_all["BatterTeam"]) if t != MY_TEAM])
@@ -7090,8 +7064,7 @@ elif page == "Next Hitters":
 # ─────────────────────────────────────────
 elif page == "Movement Plots":
     st.title("Pitch Movement")
-    st.caption("Horizontal vs induced vertical break — the shape of each pitch. "
-               "Pitcher's perspective: + horizontal = arm-side run.")
+    st.caption("Horizontal vs. induced vertical break for each pitch type, from the pitcher's perspective.")
 
     mv_teams = sorted(_team_options(df_all["PitcherTeam"]))
     c1, c2 = st.columns([1.3, 2])
@@ -7158,8 +7131,7 @@ elif page == "Movement Plots":
 # ─────────────────────────────────────────
 elif page == "Trends":
     st.title("Pitcher Trends")
-    st.caption("Velocity, movement, and results tracked appearance-by-appearance over the "
-               "season — the development read, not the season snapshot.")
+    st.caption("Velocity, movement, and results by appearance over the season.")
 
     tr_teams = sorted(_team_options(df_all["PitcherTeam"]))
     default_idx = tr_teams.index(MY_TEAM) if MY_TEAM in tr_teams else 0
@@ -7397,10 +7369,8 @@ elif page == "Trends":
 # ─────────────────────────────────────────
 elif page == "Barrel Report":
     st.title("Barrel & Batted-Ball Quality")
-    st.caption("Contact quality measured **relative to the FCBL**, not MLB. Summer-college "
-               "exit velocities run lower than the majors, so thresholds are set from this "
-               "league's own distribution: 'Hard-Hit' = top ~38% of contact, 'Barrel' = top "
-               "~8% by exit-velo + launch-angle quality (mirroring MLB *rates*, not MLB speeds).")
+    st.caption("Contact quality by exit velocity and launch angle. 'Hard-Hit' = top ~38% of contact, "
+               "'Barrel' = top ~8% by exit-velo + launch-angle quality.")
 
     br_mode = st.radio("View", ["Hitters", "Pitchers"], horizontal=True, key="br_mode")
     col = "Batter" if br_mode == "Hitters" else "Pitcher"
@@ -7557,8 +7527,7 @@ elif page == "Pitch Run Values":
 
 elif page == "Catcher Report":
     st.title("Catcher Report — Pitcher Breakdown by Catcher")
-    st.caption("How each Brookhaven pitcher performs when paired with each catcher. "
-               "Strike%, Whiff%, and pitch mix by pitcher-catcher combination.")
+    st.caption("Strike%, Whiff%, and pitch mix for each pitcher-catcher combination.")
     st.divider()
 
     # Filter to our pitchers only
@@ -7981,13 +7950,8 @@ elif page == "Bullpen":
 
 elif page == "Reliever Matchups":
     st.title("Reliever Matchup Planner")
-    st.caption(
-        "Input the upcoming lineup and available relievers. "
-        "The tool scores each reliever against each batter based on handedness, "
-        "K/BB rate, and each hitter's own xwOBA + whiff% against pitches that "
-        "match the reliever's actual velocity and movement — not just the same "
-        "pitch-type label."
-    )
+    st.caption("Reliever-vs-batter matchup scores based on handedness, K/BB rate, and each hitter's "
+               "xwOBA + whiff% against similar velocity and movement.")
     st.divider()
 
     import plotly.graph_objects as go_rm
@@ -8284,15 +8248,6 @@ elif "Pitch Editor" in page:
                MY_TEAM=MY_TEAM,
                DATA_DIR=str(DATA_DIR))
 
-elif page == "Defensive Positioning":
-    import importlib.util as _ilu
-    from pathlib import Path as _Path
-    _pos_path = _Path(__file__).parent / "positioning.py"
-    _spec = _ilu.spec_from_file_location("positioning", _pos_path)
-    _posmod = _ilu.module_from_spec(_spec)
-    _spec.loader.exec_module(_posmod)
-    _posmod.render(df_all, MY_TEAM=MY_TEAM, player_last=player_last, DATA_DIR=DATA_DIR)
-
 elif page == "3D Trajectories":
     import importlib.util as _ilu
     from pathlib import Path as _Path
@@ -8313,11 +8268,7 @@ elif page == "Whiff Distance":
 
 elif page == "OPS+ Leaderboard":
     st.title("OPS+ Leaderboard")
-    st.caption(
-        "OPS indexed to league average — 100 is league average, 130 means 30% "
-        "better than average. Uses official stats where available, TrackMan otherwise. "
-        "Park-adjusted using each hitter's actual mix of parks played in."
-    )
+    st.caption("OPS indexed to league average (100 = average), park-adjusted.")
 
     min_pa = st.slider("Minimum plate appearances", 1, 40, 10,
                        help="Filter out tiny samples")
@@ -8433,15 +8384,7 @@ elif page == "OPS+ Leaderboard":
 # ─────────────────────────────────────────
 elif page == "Player WAR":
     st.title("Player WAR")
-    st.caption("A simplified Wins Above Replacement, built the same way fWAR/bWAR are — batting "
-               "runs from wOBA vs. league average, pitching runs from FIP vs. league average, "
-               "both compared to a replacement-level baseline and converted to wins at a fixed "
-               "runs-per-win rate. Both wOBA and FIP are park-adjusted using each player's own "
-               "mix of home/road ballparks before comparing to the league baseline. Defense and "
-               "baserunning are folded in for any team we have official season fielding/stolen-"
-               "base stats for (TrackMan alone doesn't track either) — any team not yet on file "
-               "gets offense-only WAR until its stats are added too. Still a directional ranking "
-               "tool, not an exact MLB-style WAR.")
+    st.caption("Wins Above Replacement from batting runs (wOBA) and pitching runs (FIP), park-adjusted.")
 
     RUNS_PER_WIN = 10.0     # standard sabermetric constant
     WOBA_SCALE   = 1.15     # ~runs per 1.0 wOBA point, same scale used elsewhere in the app
@@ -8699,12 +8642,7 @@ elif page == "Player WAR":
 # ─────────────────────────────────────────
 elif page == "Starters vs Bullpen":
     st.title("Starters vs Bullpen")
-    st.caption("The team's cumulative starter stat line vs. its bullpen stat line, same advanced "
-               "metrics used everywhere else in the app (FIP/xFIP/xERA, Stuff+, whiff/chase, "
-               "first-pitch-strike%) plus the basic box-score numbers. A pitcher's own pitches "
-               "count toward 'Starters' only for games where he threw the first pitch for his "
-               "team — any relief outing, even by a regular starter, counts toward Bullpen for "
-               "that game.")
+    st.caption("The team's cumulative starter stat line vs. its bullpen stat line.")
 
     sb_teams = sorted(_team_options(df_all["PitcherTeam"]))
     sb_team = st.selectbox("Team", options=sb_teams,
@@ -8982,8 +8920,7 @@ elif page == "Starters vs Bullpen":
 # ─────────────────────────────────────────
 elif page == "Report Generator":
     st.title("Printable Scouting Sheet")
-    st.caption("A printable one-page scouting sheet for any team, rebuilt from the data every "
-               "time it loads. Pitchers on top, hitters below — same layout as the dugout sheet.")
+    st.caption("A printable one-page scouting sheet for any team — pitchers on top, hitters below.")
 
     _rg_teams = sorted((set(df_all["PitcherTeam"].dropna()) | set(df_all["BatterTeam"].dropna())) - EXCLUDED_TEAMS)
     ca, cb = st.columns([2, 1])
@@ -9053,8 +8990,7 @@ elif page == "Report Generator":
 
 elif page == "League Rankings":
     st.title("League Pitching Rankings")
-    st.caption("FIP, xFIP, and xERA for every FCBL team — lower is better, sorted by xERA, "
-               "park-adjusted using each team's actual mix of home and road ballparks.")
+    st.caption("FIP, xFIP, and xERA for every team, park-adjusted. Lower is better.")
     import plotly.graph_objects as go_lr
 
     FIP_CONSTANT  = 3.10
@@ -9245,11 +9181,7 @@ elif page == "League Rankings":
 
 elif page == "xBA Report":
     st.title("Expected Stats Report — xBA, xSLG, xwOBA")
-    st.caption(
-        "Expected stats estimate outcomes based on exit velocity and launch angle using the MLB Statcast lookup table, "
-        "calibrated to FCBL. They remove the influence of defense, park, and luck — "
-        "showing true contact quality regardless of results."
-    )
+    st.caption("Expected outcomes from exit velocity and launch angle, removing defense, park, and luck.")
     st.divider()
 
     def build_xba_table(team_filter, label):
@@ -9535,1254 +9467,9 @@ elif page == "xBA Report":
     build_xba_table("our", MY_TEAM)
 
 
-# ─────────────────────────────────────────
-#  PAGE: TEAM TOTALS
-# ─────────────────────────────────────────
-elif page == "Team Totals":
-    st.title("Season Totals by Opponent")
-    st.caption(f"{team_label(MY_TEAM)}'s combined offensive and pitching stat lines, split out by "
-               "opponent, plus the team's overall totals — both with and without games against "
-               "the Lowell Spinners called out separately.")
-
-    LOWELL_CODE = "LOW_SPI1"  # TEAM_LABELS[LOWELL_CODE] == "Lowell Spinners"
-
-    @st.cache_data(ttl=300, max_entries=3)
-    def _load_official_team_gamelog(kind):
-        """Official per-game team hitting/pitching log exported from
-        thefuturesleague.com (Data/official_team_gamelog_hitting.csv /
-        _pitching.csv). Used as the ground truth for Team Totals instead of
-        the TrackMan-derived numbers, since it's the site the league (and
-        opponents) actually go by. Empty DataFrame if the file isn't there."""
-        f = DATA_DIR / f"official_team_gamelog_{kind}.csv"
-        if not f.exists():
-            return pd.DataFrame()
-        try:
-            df = pd.read_csv(f)
-        except Exception:
-            return pd.DataFrame()
-        if kind == "pitching" and not df.empty:
-            # The site publishes WHIP but not walks directly — back it out
-            # from WHIP * IP - H (IP in baseball notation: .1/.2 = thirds).
-            def _outs(ip):
-                whole = int(ip)
-                frac = round((ip - whole) * 10)  # 0, 1, or 2 -> outs past whole innings
-                return whole * 3 + frac
-            outs = df["IP"].apply(_outs)
-            ip_actual = outs / 3
-            df["BB"] = ((df["WHIP"] * ip_actual).round() - df["H"]).clip(lower=0).astype(int)
-            df["_outs"] = outs
-        return df
-
-    official_hit = _load_official_team_gamelog("hitting")
-    official_pit = _load_official_team_gamelog("pitching")
-
-    def _official_bat_line(sub):
-        ab = int(sub["AB"].sum())
-        h  = int(sub["H"].sum())
-        doubles = int(sub["2B"].sum())
-        triples = int(sub["3B"].sum())
-        hr      = int(sub["HR"].sum())
-        singles = h - doubles - triples - hr
-        bb  = int(sub["BB"].sum())
-        so  = int(sub["K"].sum())
-        hbp = int(sub["HBP"].sum())
-        sf  = int(sub["SF"].sum())
-        sh  = int(sub["SH"].sum())
-        rbi = int(sub["RBI"].sum())
-        pa  = ab + bb + hbp + sf + sh
-        avg = h / ab if ab else 0.0
-        obp = (h + bb + hbp) / max(ab + bb + hbp + sf, 1)
-        slg = (singles + 2 * doubles + 3 * triples + 4 * hr) / max(ab, 1)
-        return {
-            "PA": pa, "AB": ab, "H": h, "2B": doubles, "3B": triples, "HR": hr,
-            "BB": bb, "SO": so, "HBP": hbp, "RBI": rbi,
-            "AVG": f"{avg:.3f}", "OBP": f"{obp:.3f}", "SLG": f"{slg:.3f}",
-            "OPS": f"{obp + slg:.3f}",
-            "K%": f"{so / max(pa, 1):.0%}", "BB%": f"{bb / max(pa, 1):.0%}",
-        }
-
-    def _official_pitch_line(sub):
-        outs = int(sub["_outs"].sum())
-        ip_num  = outs / 3
-        ip_disp = f"{outs // 3}.{outs % 3}"
-        h  = int(sub["H"].sum())
-        r  = int(sub["R"].sum())
-        er = int(sub["ER"].sum())
-        bb = int(sub["BB"].sum())
-        k  = int(sub["K"].sum())
-        hr = int(sub["HR"].sum())
-        era  = 9 * er / ip_num if ip_num > 0 else 0.0
-        whip = (bb + h) / ip_num if ip_num > 0 else 0.0
-        return {
-            "IP": ip_disp, "H": h, "R": r, "ER": er, "BB": bb, "SO": k, "HR": hr,
-            "ERA": f"{era:.2f}", "WHIP": f"{whip:.2f}",
-        }
-
-    # ── TrackMan fallback — only used if the official CSVs aren't present ──
-    def _team_bat_line(sub):
-        pa = int((sub["PitchofPA"] == 1).sum()) if "PitchofPA" in sub.columns else 0
-        ab = int(_ab_mask(sub).sum())
-        h  = int(sub["PlayResult"].isin(["Single", "Double", "Triple", "HomeRun"]).sum())
-        doubles = int(sub["PlayResult"].eq("Double").sum())
-        triples = int(sub["PlayResult"].eq("Triple").sum())
-        hr      = int(sub["PlayResult"].eq("HomeRun").sum())
-        singles = h - doubles - triples - hr
-        bb  = int(sub["KorBB"].eq("Walk").sum())
-        so  = int(sub["KorBB"].eq("Strikeout").sum())
-        hbp = int(sub["PitchCall"].eq("HitByPitch").sum())
-        sac = int(sub["PlayResult"].eq("Sacrifice").sum())
-        avg = h / ab if ab else 0.0
-        obp = (h + bb + hbp) / max(pa - sac, 1)
-        slg = (singles + 2 * doubles + 3 * triples + 4 * hr) / max(ab, 1)
-        return {
-            "PA": pa, "AB": ab, "H": h, "2B": doubles, "3B": triples, "HR": hr,
-            "BB": bb, "SO": so, "HBP": hbp,
-            "AVG": f"{avg:.3f}", "OBP": f"{obp:.3f}", "SLG": f"{slg:.3f}",
-            "OPS": f"{obp + slg:.3f}",
-            "K%": f"{so / max(pa, 1):.0%}", "BB%": f"{bb / max(pa, 1):.0%}",
-        }
-
-    def _team_pitch_line(sub):
-        bf = int((sub["PitchofPA"] == 1).sum()) if "PitchofPA" in sub.columns else 0
-        k  = int(sub["KorBB"].eq("Strikeout").sum())
-        bb = int(sub["KorBB"].eq("Walk").sum())
-        h  = int(sub["PlayResult"].isin(["Single", "Double", "Triple", "HomeRun"]).sum())
-        runs = int(sub["RunsScored"].fillna(0).sum()) if "RunsScored" in sub.columns else 0
-        outs = (sub["OutsOnPlay"].fillna(0).sum() + k) if "OutsOnPlay" in sub.columns else k
-        ip_num  = outs / 3
-        ip_disp = f"{int(outs // 3)}.{int(outs % 3)}"
-        ab = int(_ab_mask(sub).sum())
-        opp_avg = h / ab if ab else 0.0
-        whip = (bb + h) / ip_num if ip_num > 0 else 0.0
-        return {
-            "BF": bf, "IP": ip_disp, "H": h, "R": runs, "BB": bb, "SO": k,
-            "Opp AVG": f"{opp_avg:.3f}", "WHIP": f"{whip:.2f}",
-            "K%": f"{k / max(bf, 1):.0%}", "BB%": f"{bb / max(bf, 1):.0%}",
-        }
-
-    our_bat = df_all[df_all["BatterTeam"] == MY_TEAM]
-    our_pit = df_all[df_all["PitcherTeam"] == MY_TEAM]
-
-    st.markdown("### Offense")
-    if not official_hit.empty:
-        st.caption("Source: official game log (thefuturesleague.com), through the last game "
-                   "loaded into Data/official_team_gamelog_hitting.csv.")
-        bat_opponents = sorted(t for t in official_hit["Opponent"].dropna().unique()
-                               if t != MY_TEAM and t not in EXCLUDED_TEAMS)
-        bat_rows = [{"Opponent": team_label(opp),
-                    **_official_bat_line(official_hit[official_hit["Opponent"] == opp])}
-                   for opp in bat_opponents]
-        bat_rows.append({"Opponent": "Overall", **_official_bat_line(official_hit)})
-        bat_rows.append({"Opponent": f"Overall (excl. {team_label(LOWELL_CODE)})",
-                         **_official_bat_line(official_hit[official_hit["Opponent"] != LOWELL_CODE])})
-        st.dataframe(pd.DataFrame(bat_rows), use_container_width=True, hide_index=True)
-    elif our_bat.empty:
-        st.info("No offensive data found for this team.")
-    else:
-        st.caption("Source: TrackMan (no Data/official_team_gamelog_hitting.csv on file).")
-        bat_opponents = sorted(t for t in our_bat["PitcherTeam"].dropna().unique()
-                               if t != MY_TEAM and t not in EXCLUDED_TEAMS)
-        bat_rows = [{"Opponent": team_label(opp),
-                    **_team_bat_line(our_bat[our_bat["PitcherTeam"] == opp])}
-                   for opp in bat_opponents]
-        bat_rows.append({"Opponent": "Overall", **_team_bat_line(our_bat)})
-        bat_rows.append({"Opponent": f"Overall (excl. {team_label(LOWELL_CODE)})",
-                         **_team_bat_line(our_bat[our_bat["PitcherTeam"] != LOWELL_CODE])})
-        st.dataframe(pd.DataFrame(bat_rows), use_container_width=True, hide_index=True)
-
-    st.divider()
-    st.markdown("### Pitching")
-    if not official_pit.empty:
-        st.caption("Source: official game log (thefuturesleague.com). Walks aren't published "
-                   "directly — they're backed out from WHIP × IP − H, so BB/WHIP may be "
-                   "off by a game or two of rounding.")
-        pit_opponents = sorted(t for t in official_pit["Opponent"].dropna().unique()
-                               if t != MY_TEAM and t not in EXCLUDED_TEAMS)
-        pit_rows = [{"Opponent": team_label(opp),
-                    **_official_pitch_line(official_pit[official_pit["Opponent"] == opp])}
-                   for opp in pit_opponents]
-        pit_rows.append({"Opponent": "Overall", **_official_pitch_line(official_pit)})
-        pit_rows.append({"Opponent": f"Overall (excl. {team_label(LOWELL_CODE)})",
-                         **_official_pitch_line(official_pit[official_pit["Opponent"] != LOWELL_CODE])})
-        st.dataframe(pd.DataFrame(pit_rows), use_container_width=True, hide_index=True)
-    elif our_pit.empty:
-        st.info("No pitching data found for this team.")
-    else:
-        st.caption("Source: TrackMan (no Data/official_team_gamelog_pitching.csv on file).")
-        pit_opponents = sorted(t for t in our_pit["BatterTeam"].dropna().unique()
-                               if t != MY_TEAM and t not in EXCLUDED_TEAMS)
-        pit_rows = [{"Opponent": team_label(opp),
-                    **_team_pitch_line(our_pit[our_pit["BatterTeam"] == opp])}
-                   for opp in pit_opponents]
-        pit_rows.append({"Opponent": "Overall", **_team_pitch_line(our_pit)})
-        pit_rows.append({"Opponent": f"Overall (excl. {team_label(LOWELL_CODE)})",
-                         **_team_pitch_line(our_pit[our_pit["BatterTeam"] != LOWELL_CODE])})
-        st.dataframe(pd.DataFrame(pit_rows), use_container_width=True, hide_index=True)
-
-
-# ─────────────────────────────────────────
-#  SEASON REPORT — hitter/pitcher wrap-up reports built for handing to
-#  players on their way out at season's end. Everything below is rebuilt
-#  from the Data/ folder (and Data/official_stats.csv, once it exists)
-#  every time the page loads, so it updates automatically as the last
-#  games of the season are entered — nothing here is hand-typed.
-# ─────────────────────────────────────────
-_SR_RED = "#C8102E"
-
-def _sr_banner(subtitle):
-    st.markdown(
-        "<div style='text-align:center;padding:14px 0 8px 0;border-bottom:3px solid " + _SR_RED + ";'>"
-        "<div style='font-family:Oswald,Inter,sans-serif;font-size:30px;font-weight:700;"
-        "color:" + _SR_RED + " !important;letter-spacing:.05em;line-height:1.1;'>"
-        "BROOKHAVEN BANDITS SEASON REPORT</div>"
-        "<div style='font-family:Inter,sans-serif;font-size:14px;color:#000 !important;"
-        "margin-top:4px;'>" + subtitle + "</div></div>",
-        unsafe_allow_html=True)
-
-def _sr_section(title):
-    st.markdown(
-        "<div style='font-family:Oswald,Inter,sans-serif;text-transform:uppercase;"
-        "letter-spacing:.06em;font-size:1rem;font-weight:600;color:#000 !important;"
-        "margin-top:1.3rem;margin-bottom:.4rem;border-bottom:1px solid #E2E8F0;padding-bottom:3px;'>"
-        + title + "</div>", unsafe_allow_html=True)
-
-_SR_SWING_C = {"StrikeSwinging", "InPlay", "FoulBallNotFieldable", "FoulBallFieldable", "FoulTip", "FoulBall"}
-_SR_HITS = ["Single", "Double", "Triple", "HomeRun"]
-
-
-def _official_k_bb(player_name):
-    """Season K% and BB% per plate appearance from the official league stats
-    (Data/official_stats.csv, built from the league stats PDF), or (None, None)
-    when that file isn't on file yet — the caller then falls back to the
-    TrackMan-derived rates. PA is rebuilt from AB+BB+HBP+SF+SH when the export
-    doesn't carry a PA column of its own.
-
-    Season totals only, so this is valid for the Overall split — never for
-    vs RHP / vs LHP, which the official export doesn't break out."""
-    ab = get_official_stat(player_name, "ab")
-    bb = get_official_stat(player_name, "bb")
-    so = get_official_stat(player_name, "so")
-    if ab is None or bb is None or so is None:
-        return None, None
-    pa = get_official_stat(player_name, "pa")
-    if pa is None:
-        pa = (ab + bb + (get_official_stat(player_name, "hbp") or 0)
-              + (get_official_stat(player_name, "sf") or 0)
-              + (get_official_stat(player_name, "sh") or 0))
-    if not pa or pa <= 0:
-        return None, None
-    return so / pa, bb / pa
-
-
-def _count_matrix_html(count_matrix, pitch_types, count_totals, all_counts):
-    """Pitch usage % at every ball-strike count, as an HTML table — same
-    look as the Pitcher Scouting page's Full Count Matrix."""
-    header = ("<tr><th style='background:#F1F5F9;padding:5px 8px;text-align:left;"
-              "color:#64748b;font-size:.72rem;'>Pitch</th>")
-    for b, s_ in all_counts:
-        n = count_totals.get((b, s_), 0)
-        header += (f"<th style='background:#F1F5F9;padding:5px 6px;text-align:center;"
-                   f"color:#64748b;font-size:.72rem;'>{b}-{s_}<br>"
-                   f"<span style='font-size:.6rem;'>n={n}</span></th>")
-    header += "</tr>"
-    rows_html = ""
-    for pt in pitch_types:
-        color = PITCH_COLORS.get(pt, "#64748b")
-        row = (f"<tr><td style='padding:5px 8px;color:{color};font-weight:600;"
-               f"font-size:.78rem;white-space:nowrap;'>{pt}</td>")
-        for b, s_ in all_counts:
-            pct = count_matrix.get(pt, {}).get((b, s_), 0)
-            n = count_totals.get((b, s_), 0)
-            if n == 0:
-                bg, text, tc = "#F1F5F9", "—", "#475569"
-            else:
-                alpha = min(pct * 1.5, 1.0)
-                hexc = color.lstrip("#")
-                r, g, bl = int(hexc[0:2], 16), int(hexc[2:4], 16), int(hexc[4:6], 16)
-                bg = f"rgba({r},{g},{bl},{alpha:.2f})"
-                text = f"{pct:.0%}" if pct > 0 else "—"
-                tc = "#ffffff" if alpha > 0.4 else "#1e293b"
-            row += (f"<td style='padding:5px 6px;text-align:center;background:{bg};"
-                    f"font-size:.76rem;font-weight:700;color:{tc};'>{text}</td>")
-        row += "</tr>"
-        rows_html += row
-    return ("<div style='overflow-x:auto;'><table style='border-collapse:collapse;width:100%;"
-            "background:#fff;border-radius:8px;overflow:hidden;'><thead>" + header + "</thead>"
-            "<tbody>" + rows_html + "</tbody></table></div>")
-
-
-# ── Hitter season report ──
-def _hitter_season_stats(bp):
-    """All Season Report numbers for one slice of a hitter's pitches — pass
-    an already hand-filtered slice (overall, vs RHP, or vs LHP)."""
-    ab = int(_ab_mask(bp).sum())
-    h = int(bp["PlayResult"].isin(_SR_HITS).sum())
-    pa = int((bp["PitchofPA"] == 1).sum()) if "PitchofPA" in bp.columns else ab
-    bb = int(bp["KorBB"].eq("Walk").sum())
-    k = int(bp["KorBB"].eq("Strikeout").sum())
-    hbp = int(bp["PitchCall"].eq("HitByPitch").sum())
-    dbl = int(bp["PlayResult"].eq("Double").sum())
-    trp = int(bp["PlayResult"].eq("Triple").sum())
-    hr = int(bp["PlayResult"].eq("HomeRun").sum())
-    singles = h - dbl - trp - hr
-    ba = h / ab if ab else None
-    obp = (h + bb + hbp) / pa if pa else None
-    slg = (singles + 2*dbl + 3*trp + 4*hr) / ab if ab else None
-    ops = (obp + slg) if (obp is not None and slg is not None) else None
-    k_pct = k / pa if pa else None
-    bb_pct = bb / pa if pa else None
-
-    bip = bp[bp["PitchCall"].eq("InPlay")]
-    xba, xslg, xwoba, xba_n = batter_expected_stats(bp)
-    avg_ev, max_ev, ev90 = _ev_stats(bip)
-    barrel, hard, n_bip = _quality_rates(bip)
-
-    haz = _attack_zone_frame(bp)
-    z_sw, o_sw, n_in, n_out = _true_zone_swing(haz)
-    whiff_pct = _safe_whiff(bp)
-
-    az_rows = []
-    if len(haz) >= 10:
-        vc = haz["_az"].value_counts(normalize=True)
-        for z in _AZ_ORDER:
-            az_rows.append({"Zone": z, "His %": float(vc.get(z, 0.0)) * 100})
-
-    pitch_rows = []
-    bp_clean = bp[bp["PitchType"].notna() & (bp["PitchType"] != "None")]
-    for pt, sub in bp_clean.groupby("PitchType"):
-        sub_ab = int(_ab_mask(sub).sum())
-        if sub_ab < 3:
-            continue
-        sub_h = int(sub["PlayResult"].isin(_SR_HITS).sum())
-        sub_whiff = _safe_whiff(sub)
-        sub_bip = sub[sub["ExitSpeed"].notna() & sub["Angle"].notna() &
-                      sub["PlayResult"].isin(_SR_HITS + ["Out", "Error", "FieldersChoice"])]
-        sub_xwoba = (sub_bip.apply(lambda r: calc_xwoba_bip(r["ExitSpeed"], r["Angle"]), axis=1).mean()
-                     if len(sub_bip) else None)
-        pitch_rows.append({"Pitch": pt, "AB": sub_ab, "H": sub_h, "AVG": sub_h / sub_ab,
-                           "Whiff%": sub_whiff, "xwOBA": sub_xwoba, "_n": len(sub)})
-    pitch_rows.sort(key=lambda r: -r["_n"])
-
-    return dict(PA=pa, AB=ab, H=h, BB=bb, K=k, HBP=hbp, Doubles=dbl, Triples=trp, HR=hr,
-                BA=ba, OBP=obp, SLG=slg, OPS=ops, KPct=k_pct, BBPct=bb_pct,
-                xBA=xba, xSLG=xslg, xwOBA=xwoba,
-                AvgEV=avg_ev, MaxEV=max_ev, EV90=ev90,
-                Barrel=barrel, Hard=hard, NBip=n_bip,
-                ZSwing=z_sw, OSwing=o_sw, NIn=n_in, NOut=n_out, Whiff=whiff_pct,
-                AttackZones=az_rows, PitchRows=pitch_rows, RawDF=bp, Bip=bip, Haz=haz)
-
-
-@st.cache_data(ttl=600, max_entries=2)
-def _league_hitter_benchmarks(_hash):
-    """League-wide (pooled, every hitter/every team) version of every
-    _hitter_season_stats number, for 'Lg avg' reference text under each stat."""
-    return _hitter_season_stats(df_all)
-
-
-def _render_hitter_season_report(batter):
-    bp_all = df_all[df_all["Batter"] == batter].copy()
-    for c in ["ExitSpeed", "Angle", "PlateLocSide", "PlateLocHeight"]:
-        bp_all[c] = pd.to_numeric(bp_all[c], errors="coerce")
-    side = bp_all["BatterSide"].dropna().iloc[0] if bp_all["BatterSide"].notna().any() else "?"
-
-    _sr_banner(f"{player_last(batter)} &middot; Bats {side}")
-
-    _sr_section("Official Season Line")
-    off_row = {}
-    for lbl, key in [("G", "g"), ("AB", "ab"), ("H", "h"), ("2B", "doubles"), ("3B", "triples"),
-                      ("HR", "hr"), ("RBI", "rbi"), ("BB", "bb"), ("SO", "so"), ("SB", "sb"),
-                      ("AVG", "ba"), ("OBP", "obp"), ("SLG", "slg"), ("OPS", "ops")]:
-        v = get_official_stat(batter, key)
-        if v is not None:
-            off_row[lbl] = (f"{v:.3f}" if key in ("ba", "obp", "slg", "ops") else str(int(v)))
-    if off_row:
-        st.dataframe(pd.DataFrame([off_row]), use_container_width=True, hide_index=True)
-    else:
-        st.caption("No Data/official_stats.csv loaded yet — add the season stat export and this "
-                   "fills in automatically.")
-
-    st.divider()
-    tab_overall, tab_rhp, tab_lhp = st.tabs(["Overall", "vs Righties (RHP)", "vs Lefties (LHP)"])
-    with tab_overall:
-        _render_hitter_split(batter, bp_all, "Overall")
-    with tab_rhp:
-        _render_hitter_split(batter, bp_all[bp_all["PitcherThrows"] == "Right"], "vs RHP")
-    with tab_lhp:
-        _render_hitter_split(batter, bp_all[bp_all["PitcherThrows"] == "Left"], "vs LHP")
-
-
-def _render_hitter_split(batter, bp, split_choice):
-    s = _hitter_season_stats(bp)
-    lg = _league_hitter_benchmarks((len(df_all), tuple(df_all.columns)))
-
-    def _lg3(key):
-        v = lg.get(key)
-        return f"Lg: {v:.3f}" if v is not None else None
-
-    def _lg1(key):
-        v = lg.get(key)
-        return f"Lg: {v:.1f}" if v is not None else None
-
-    def _lgpct2(key):
-        v = lg.get(key)
-        return f"Lg: {v:.0f}%" if v == v else None
-
-    def _lgpct(key):
-        v = lg.get(key)
-        return f"Lg: {100*v:.0f}%" if v is not None else None
-
-    _sr_section("Advanced Stats")
-    a = st.columns(4)
-    a[0].metric("xwOBA", f"{s['xwOBA']:.3f}" if s["xwOBA"] is not None else "—",
-               delta=_lg3("xwOBA"), delta_color="off")
-    a[1].metric("xBA", f"{s['xBA']:.3f}" if s["xBA"] is not None else "—",
-               delta=_lg3("xBA"), delta_color="off")
-    a[2].metric("Barrel%", f"{s['Barrel']:.1f}%" if s["Barrel"] == s["Barrel"] else "—",
-               delta=_lgpct2("Barrel"), delta_color="off")
-    a[3].metric("Hard-Hit%", f"{s['Hard']:.1f}%" if s["Hard"] == s["Hard"] else "—",
-               delta=_lgpct2("Hard"), delta_color="off")
-    b = st.columns(3)
-    b[0].metric("Avg EV", f"{s['AvgEV']:.1f}" if s["AvgEV"] is not None else "—",
-               delta=_lg1("AvgEV"), delta_color="off")
-    b[1].metric("Max EV", f"{s['MaxEV']:.1f}" if s["MaxEV"] is not None else "—")
-    b[2].metric("EV90", f"{s['EV90']:.1f}" if s["EV90"] is not None else "—",
-               delta=_lg1("EV90"), delta_color="off",
-               help="90th percentile exit velocity on batted balls.")
-
-    _sr_section("Plate Discipline")
-    dd = st.columns(4)
-    dd[0].metric("Z-Swing%", f"{s['ZSwing']:.0f}%", delta=_lgpct2("ZSwing"), delta_color="off",
-                help=f"n={s['NIn']}")
-    dd[1].metric("O-Swing%", f"{s['OSwing']:.0f}%", delta=_lgpct2("OSwing"), delta_color="off",
-                help=f"n={s['NOut']}")
-    dd[2].metric("Whiff%", f"{100*s['Whiff']:.0f}%" if s["Whiff"] is not None else "—",
-                delta=_lgpct("Whiff"), delta_color="off")
-    k_pct, bb_pct, kbb_src = s["KPct"], s["BBPct"], "TrackMan pitch data"
-    if split_choice == "Overall":
-        _ok, _obb = _official_k_bb(batter)
-        if _ok is not None:
-            k_pct, bb_pct, kbb_src = _ok, _obb, "official league season stats"
-    dd[3].metric("K% / BB%", f"{100*(k_pct or 0):.0f}% / {100*(bb_pct or 0):.0f}%",
-                delta=(f"Lg: {100*lg['KPct']:.0f}% / {100*lg['BBPct']:.0f}%"
-                      if lg.get("KPct") is not None and lg.get("BBPct") is not None else None),
-                delta_color="off",
-                help=f"Per plate appearance, from {kbb_src}.")
-
-    _sr_section("Performance vs Each Pitch Type")
-    if s["PitchRows"]:
-        pr_df = pd.DataFrame(s["PitchRows"])[["Pitch", "AB", "H", "AVG", "Whiff%", "xwOBA"]].copy()
-        pr_df["AVG"] = pr_df["AVG"].map(lambda v: f"{v:.3f}")
-        pr_df["Whiff%"] = pr_df["Whiff%"].map(lambda v: f"{100*v:.0f}%" if v is not None else "—")
-        pr_df["xwOBA"] = pr_df["xwOBA"].map(lambda v: f"{v:.3f}" if v is not None else "—")
-        st.dataframe(pr_df, use_container_width=True, hide_index=True)
-    else:
-        st.caption("Not enough at-bats against any single pitch type yet (need 3+ AB).")
-
-    _sr_section("Heat Maps")
-    h1, h2, h3 = st.columns(3)
-    with h1:
-        st.caption("Pitch Location (seen)")
-        if len(bp) >= 5:
-            _render_kde_heatmap(bp, weight_col=None, key_suffix=f"sr_h_loc_{batter}_{split_choice}")
-        else:
-            st.info("Not enough location data.")
-    with h2:
-        st.caption("Hard Contact")
-        bip_loc = s["Bip"][s["Bip"]["PlateLocSide"].notna() & s["Bip"]["PlateLocHeight"].notna()]
-        if len(bip_loc) >= 5:
-            _render_kde_heatmap(bip_loc, weight_col="ExitSpeed",
-                                key_suffix=f"sr_h_ev_{batter}_{split_choice}")
-        else:
-            st.info("Not enough contact data.")
-    with h3:
-        st.caption("Whiffs")
-        sw = bp[bp["PitchCall"].isin(_SR_SWING_C) & bp["PlateLocSide"].notna() &
-               bp["PlateLocHeight"].notna()].copy()
-        if len(sw):
-            sw["_whiff_w"] = sw["PitchCall"].eq("StrikeSwinging").astype(float)
-        if len(sw) >= 5:
-            _render_kde_heatmap(sw, weight_col="_whiff_w", key_suffix=f"sr_h_wh_{batter}_{split_choice}")
-        else:
-            st.info("Not enough swing data.")
-
-    _sr_section("Swing Decisions")
-    if s["AttackZones"]:
-        lg_az = _league_attack_zone_rates(df_all, "swing")
-        zrows = [{"Zone": r["Zone"], "His Swing %": f"{r['His %']:.0f}%",
-                 "League Swing %": f"{lg_az[r['Zone']]:.0f}%"}
-                for r in s["AttackZones"]]
-        st.dataframe(pd.DataFrame(zrows), use_container_width=True, hide_index=True)
-        sw_by = {}
-        hz = s["Haz"]
-        for z in _AZ_ORDER:
-            zz = hz[hz["_az"] == z]
-            sw_by[z] = float(zz["_swing"].mean() * 100) if len(zz) else 0.0
-        components.html(_attack_zone_svg(sw_by, "Swing% by zone", is_rate=True), height=380)
-    else:
-        st.caption("Not enough located pitches yet for a swing-decision breakdown.")
-
-
-def _build_hitter_season_pdf(batter_name, side_lbl, off_row, splits, logo_path="assets/nashua_logo.png",
-                             full_name=None):
-    """splits: {"Overall": stats, "vs RHP": stats, "vs LHP": stats}, each from
-    _hitter_season_stats(). Mirrors the on-screen Season Report page: a
-    monochrome black/white/gray layout (no team color) and one full page
-    per split (Overall, vs RHP, vs LHP) with the same stat cards, tables,
-    and heat maps shown on-screen — not a condensed side-by-side comparison
-    table.
-
-    full_name is the TrackMan "Last, First" name, used to look the hitter up in
-    the official league stats for K%/BB%; batter_name is display-only (last name),
-    which would collide between two players sharing a surname."""
-    import io, os
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
-                                    PageBreak, KeepTogether)
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    from reportlab.lib.units import inch
-
-    # Monochrome, print-shop palette — no team color, reads like an official
-    # scouting/stat sheet rather than a branded flyer.
-    RED = colors.HexColor("#1A1A1A")     # kept as RED for call-site compat; now near-black
-    INK = colors.HexColor("#000000")
-    GRAY = colors.HexColor("#4B4B4B")
-    PANEL = colors.HexColor("#F4F4F4")
-    STRIPE = colors.HexColor("#F0F0F0")
-    RULE = colors.HexColor("#B9B9B9")
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=0.55*inch, bottomMargin=0.55*inch)
-    styles = getSampleStyleSheet()
-    story = []
-
-    def _rule(height=2.0):
-        t = Table([[""]], colWidths=[7.4*inch], rowHeights=[height])
-        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), RED),
-                              ("TOPPADDING", (0, 0), (-1, -1), 0),
-                              ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
-        return t
-
-    title = ParagraphStyle("s_t", parent=styles["Title"], textColor=INK, fontSize=22, spaceAfter=0, alignment=0)
-    sub = ParagraphStyle("s_s", parent=styles["Normal"], textColor=GRAY, fontSize=12, spaceAfter=0)
-    title_block = [Paragraph("Brookhaven Bandits Season Report", title),
-                   Paragraph(f"{batter_name} (Bats {side_lbl})", sub)]
-    if logo_path and os.path.exists(logo_path):
-        try:
-            head = Table([[Image(logo_path, width=0.7*inch, height=0.7*inch), title_block]],
-                        colWidths=[0.85*inch, 6.55*inch])
-        except Exception:
-            head = Table([[title_block]], colWidths=[7.4*inch])
-    else:
-        head = Table([[title_block]], colWidths=[7.4*inch])
-    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (0, 0), 0)]))
-    story += [head, Spacer(1, 8), _rule(1.6), Spacer(1, 12)]
-
-    h = ParagraphStyle("s_h", parent=styles["Heading2"], textColor=INK, fontSize=14, spaceBefore=12, spaceAfter=4)
-    h2 = ParagraphStyle("s_h2", parent=styles["Heading1"], textColor=INK, fontSize=18, spaceBefore=2, spaceAfter=8)
-    body = ParagraphStyle("s_b", parent=styles["Normal"], textColor=INK, fontSize=9.5, spaceAfter=2)
-
-    def _section(t):
-        story.append(Paragraph(t, h)); story.append(_rule(1.0)); story.append(Spacer(1, 6))
-
-    def _tbl(data, col_widths=None):
-        t = Table(data, hAlign="LEFT", colWidths=col_widths)
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), INK), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("TEXTCOLOR", (0, 1), (-1, -1), INK), ("FONTSIZE", (0, 0), (-1, -1), 9.5),
-            ("GRID", (0, 0), (-1, -1), 0.6, RULE), ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, STRIPE]),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("TOPPADDING", (0, 0), (-1, -1), 5.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
-            ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7)]))
-        return t
-
-    def _card(label, value, sub_txt, width):
-        lbl_s = ParagraphStyle("c_l", fontName="Helvetica-Bold", fontSize=7, textColor=GRAY, leading=8.5)
-        val_s = ParagraphStyle("c_v", fontName="Helvetica-Bold", fontSize=16, textColor=INK, leading=18)
-        sub_s = ParagraphStyle("c_s", fontName="Helvetica", fontSize=7, textColor=GRAY, leading=8.5)
-        rows = [[Paragraph(label.upper(), lbl_s)], [Paragraph(str(value), val_s)],
-                [Paragraph(sub_txt if sub_txt else "&nbsp;", sub_s)]]
-        t = Table(rows, colWidths=[width])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("LINEBEFORE", (0, 0), (0, -1), 2.2, INK),
-            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 5)]))
-        return t
-
-    def _card_row(specs):
-        n = len(specs)
-        gap = 0.08 * inch
-        card_w = (7.4 * inch - gap * (n - 1)) / n if n else 7.4 * inch
-        row_data, col_widths = [], []
-        for i, (label, value, sub_txt) in enumerate(specs):
-            row_data.append(_card(label, value, sub_txt, card_w))
-            col_widths.append(card_w)
-            if i < n - 1:
-                row_data.append(""); col_widths.append(gap)
-        t = Table([row_data], colWidths=col_widths)
-        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
-                              ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                              ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 12)]))
-        return t
-
-    def _f3(v): return f"{v:.3f}" if v is not None else "—"
-    def _f1(v): return f"{v:.1f}" if v is not None else "—"
-    def _fpct(v): return f"{100*v:.0f}%" if v is not None else "—"
-    def _fpct2(v): return f"{v:.0f}%" if v == v else "—"
-
-    _section("Official Season Line")
-    if off_row:
-        story.append(_tbl([list(off_row.keys()), [str(v) for v in off_row.values()]]))
-    else:
-        story.append(Paragraph("No Data/official_stats.csv on file yet.", body))
-    story.append(Spacer(1, 10))
-
-    lg = _league_hitter_benchmarks((len(df_all), tuple(df_all.columns)))
-
-    def _lg3(key):
-        v = lg.get(key); return f"Lg: {v:.3f}" if v is not None else None
-    def _lg1(key):
-        v = lg.get(key); return f"Lg: {v:.1f}" if v is not None else None
-    def _lgpct2(key):
-        v = lg.get(key); return f"Lg: {v:.0f}%" if v == v else None
-    def _lgpct(key):
-        v = lg.get(key); return f"Lg: {100*v:.0f}%" if v is not None else None
-
-    for i, (sp_key, sp_label) in enumerate(
-            [("Overall", "Overall"), ("vs RHP", "vs Righties (RHP)"), ("vs LHP", "vs Lefties (LHP)")]):
-        s = splits[sp_key]
-        if i > 0:
-            story.append(PageBreak())
-        story.append(Paragraph(sp_label, h2)); story.append(_rule(1.6)); story.append(Spacer(1, 8))
-
-        story.append(KeepTogether([
-            Paragraph("Advanced Stats", h),
-            _card_row([
-                ("xwOBA", _f3(s["xwOBA"]), _lg3("xwOBA")), ("xBA", _f3(s["xBA"]), _lg3("xBA")),
-                ("Barrel%", _fpct2(s["Barrel"]), _lgpct2("Barrel")),
-                ("Hard-Hit%", _fpct2(s["Hard"]), _lgpct2("Hard")),
-            ]),
-            _card_row([
-                ("Avg EV", _f1(s["AvgEV"]), _lg1("AvgEV")), ("Max EV", _f1(s["MaxEV"]), None),
-                ("EV90", _f1(s["EV90"]), _lg1("EV90")),
-            ]),
-        ]))
-
-        kbb_sub = (f"Lg: {100*lg['KPct']:.0f}% / {100*lg['BBPct']:.0f}%"
-                  if lg.get("KPct") is not None and lg.get("BBPct") is not None else None)
-        k_pct, bb_pct = s["KPct"], s["BBPct"]
-        if sp_key == "Overall":
-            _ok, _obb = _official_k_bb(full_name or batter_name)
-            if _ok is not None:
-                k_pct, bb_pct = _ok, _obb
-        story.append(KeepTogether([
-            Paragraph("Plate Discipline", h),
-            _card_row([
-                ("Z-Swing%", f"{s['ZSwing']:.0f}%", _lgpct2("ZSwing")),
-                ("O-Swing%", f"{s['OSwing']:.0f}%", _lgpct2("OSwing")),
-                ("Whiff%", _fpct(s["Whiff"]), _lgpct("Whiff")),
-                ("K% / BB%", f"{100*(k_pct or 0):.0f}% / {100*(bb_pct or 0):.0f}%", kbb_sub),
-            ]),
-        ]))
-
-        pt_content = [Paragraph("Performance vs Each Pitch Type", h), _rule(1.1), Spacer(1, 5)]
-        if s["PitchRows"]:
-            pt_rows = [["Pitch", "AB", "H", "AVG", "Whiff%", "xwOBA"]]
-            for r in s["PitchRows"]:
-                pt_rows.append([r["Pitch"], str(r["AB"]), str(r["H"]), f"{r['H']/r['AB']:.3f}",
-                                _fpct(r["Whiff%"]), _f3(r["xwOBA"])])
-            pt_content.append(_tbl(pt_rows))
-        else:
-            pt_content.append(Paragraph("Not enough at-bats against any single pitch type.", body))
-        story.append(KeepTogether(pt_content))
-
-        hm_content = [Paragraph("Heat Maps", h), _rule(1.1), Spacer(1, 5)]
-        bip = s["Bip"]
-        sw = s["RawDF"][s["RawDF"]["PitchCall"].isin(_SR_SWING_C)].copy()
-        if len(sw):
-            sw["_whiff_w"] = sw["PitchCall"].eq("StrikeSwinging").astype(float)
-        panels = [(s["RawDF"], None, "Pitch Location"), (bip, "ExitSpeed", "Hard Contact"), (sw, "_whiff_w", "Whiffs")]
-        imgs = [_kde_heatmap_png(d, weight_col=w) if len(d) >= 5 else None for d, w, _ in panels]
-        if any(imgs):
-            cap_row = [Paragraph(f"<b>{lbl}</b>", body) for _, _, lbl in panels]
-            img_row = [Image(io.BytesIO(png), width=2.1*inch, height=2.35*inch) if png
-                      else Paragraph("Not enough data", body) for png in imgs]
-            t = Table([cap_row, img_row], colWidths=[2.2*inch]*3)
-            t.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-            hm_content.append(t)
-        else:
-            hm_content.append(Paragraph("Not enough location data for heat maps.", body))
-        story.append(KeepTogether(hm_content))
-
-        sd_content = [Paragraph("Swing Decisions", h), _rule(1.1), Spacer(1, 5)]
-        if s["AttackZones"]:
-            lg_az = _league_attack_zone_rates(df_all, "swing")
-            az_rows = [["Zone", "His Swing %", "League Swing %"]]
-            for r in s["AttackZones"]:
-                az_rows.append([r["Zone"], f"{r['His %']:.0f}%", f"{lg_az[r['Zone']]:.0f}%"])
-            sd_content.append(_tbl(az_rows))
-        else:
-            sd_content.append(Paragraph("Not enough located pitches for a swing-decision breakdown.", body))
-        story.append(KeepTogether(sd_content))
-
-    doc.build(story)
-    return buf.getvalue()
-
-
-# ── Pitcher season report ──
-def _pitcher_season_stats(pitcher_name, pp):
-    pp = pp.copy()
-    for c in ["RelSpeed", "SpinRate", "InducedVertBreak", "HorzBreak",
-             "PlateLocSide", "PlateLocHeight", "Balls", "Strikes"]:
-        if c in pp.columns:
-            pp[c] = pd.to_numeric(pp[c], errors="coerce")
-    pp_clean = pp[pp["PitchType"].notna() & (pp["PitchType"] != "None")]
-    total = len(pp_clean)
-
-    agg_dict = {"Count": ("PitchType", "count"), "AvgVelo": ("RelSpeed", "mean")}
-    if "SpinRate" in pp_clean.columns: agg_dict["AvgSpin"] = ("SpinRate", "mean")
-    if "InducedVertBreak" in pp_clean.columns: agg_dict["AvgIVB"] = ("InducedVertBreak", "mean")
-    if "HorzBreak" in pp_clean.columns: agg_dict["AvgHB"] = ("HorzBreak", "mean")
-    mix = pp_clean.groupby("PitchType").agg(**agg_dict).reset_index() if total else \
-        pd.DataFrame(columns=["PitchType", "Count", "AvgVelo"])
-    if len(mix):
-        mix["Pct"] = (mix["Count"] / max(total, 1) * 100).round(1)
-        mix = mix.sort_values("Count", ascending=False).reset_index(drop=True)
-        stuff = (stuff_plus_df[stuff_plus_df["Pitcher"] == pitcher_name][["PitchType", "StuffPlus"]]
-                if not stuff_plus_df.empty else pd.DataFrame(columns=["PitchType", "StuffPlus"]))
-        mix = mix.merge(stuff, on="PitchType", how="left")
-
-    pitch_types = [p for p in mix["PitchType"].tolist() if p not in ("Undefined", "Other")] if len(mix) else []
-
-    az_rows = []
-    if "PlateLocSide" in pp_clean.columns:
-        _pz = pp_clean.dropna(subset=["PlateLocSide", "PlateLocHeight"])
-        if len(_pz) >= 10:
-            _pz = _pz.copy()
-            _pz["_z"] = _pz.apply(lambda r: attack_zone(r["PlateLocSide"], r["PlateLocHeight"]), axis=1)
-            _lg = _league_attack_zone_rates(df_all, "pitch")
-            _pv = _pz["_z"].value_counts(normalize=True) * 100
-            for z in _AZ_ORDER:
-                az_rows.append({"Zone": z, "His %": float(_pv.get(z, 0.0)), "League %": _lg[z]})
-
-    all_counts = [(0, 0), (1, 0), (2, 0), (3, 0), (0, 1), (1, 1), (2, 1), (3, 1),
-                 (0, 2), (1, 2), (2, 2), (3, 2)]
-    count_matrix, count_totals = {}, {}
-    if "Balls" in pp_clean.columns and "Strikes" in pp_clean.columns:
-        for b, s_ in all_counts:
-            cp = pp_clean[(pp_clean["Balls"] == b) & (pp_clean["Strikes"] == s_)]
-            count_totals[(b, s_)] = len(cp)
-            for pt in pitch_types:
-                pct = (cp["PitchType"] == pt).sum() / len(cp) if len(cp) else 0
-                count_matrix.setdefault(pt, {})[(b, s_)] = pct
-
-    fip_m = _season_pitcher_fip_metrics(pp)
-    xera = calc_xera_estimate(pp, df_all)
-
-    return dict(Mix=mix, PitchTypes=pitch_types, AttackZones=az_rows,
-                CountMatrix=count_matrix, CountTotals=count_totals, AllCounts=all_counts,
-                FipMetrics=fip_m, xERA=xera, Total=total, Pitches=pp, PitchesClean=pp_clean)
-
-
-def _movement_vs_league_png(pitcher_name, pp_overall, width_in=4.6, height_in=4.0):
-    """Matplotlib twin of the on-screen movement-vs-league scatter, for PDF embedding."""
-    import io as _io
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as _plt
-    try:
-        import matchup_model as mm
-    except Exception:
-        return None
-
-    prof = mm.pitcher_arsenal_profile(pp_overall, min_n=10)
-    if not prof:
-        return None
-    lg = df_all.copy()
-    for c in ["InducedVertBreak", "HorzBreak"]:
-        lg[c] = pd.to_numeric(lg[c], errors="coerce")
-    lg_avg = (lg[lg["PitchType"].isin(prof.keys())]
-             .groupby(["Pitcher", "PitchType"])
-             .agg(IVB=("InducedVertBreak", "mean"), HB=("HorzBreak", "mean"), N=("PitchType", "count"))
-             .reset_index())
-    lg_avg = lg_avg[(lg_avg["N"] >= 10) & (lg_avg["Pitcher"] != pitcher_name)]
-
-    fig, ax = _plt.subplots(figsize=(width_in, height_in), dpi=150)
-    for pt in prof:
-        color = PITCH_COLORS.get(pt, "#64748b")
-        sub = lg_avg[lg_avg["PitchType"] == pt]
-        if len(sub):
-            ax.scatter(sub["HB"], sub["IVB"], color=color, s=14, alpha=0.18, linewidths=0)
-    for pt, d in prof.items():
-        color = PITCH_COLORS.get(pt, "#64748b")
-        ax.scatter([d["hb"]], [d["ivb"]], color=color, s=140, marker="*",
-                  edgecolors="#1e293b", linewidths=1.2, zorder=5)
-        ax.annotate(pt, (d["hb"], d["ivb"]), fontsize=7, color="#1e293b",
-                   xytext=(4, 4), textcoords="offset points")
-    ax.axhline(0, color="#cbd5e1", linewidth=0.8)
-    ax.axvline(0, color="#cbd5e1", linewidth=0.8)
-    ax.set_xlim(-26, 26); ax.set_ylim(-24, 32)
-    ax.set_xlabel("Horizontal Break (in)", fontsize=8)
-    ax.set_ylabel("Induced Vert Break (in)", fontsize=8)
-    ax.tick_params(labelsize=7)
-    ax.set_aspect("equal")
-    fig.tight_layout(pad=0.4)
-    buf = _io.BytesIO()
-    fig.savefig(buf, format="png", facecolor="white")
-    _plt.close(fig)
-    return buf.getvalue()
-
-
-def _render_movement_vs_league(pitcher_name, pp_overall):
-    try:
-        import matchup_model as mm
-    except Exception as e:
-        st.caption(f"Movement-vs-league plot unavailable: {type(e).__name__} — {e}")
-        return
-    prof = mm.pitcher_arsenal_profile(pp_overall, min_n=10)
-    if not prof:
-        st.caption("Not enough pitches of any single type (10+) to plot movement.")
-        return
-    lg = df_all.copy()
-    for c in ["InducedVertBreak", "HorzBreak"]:
-        lg[c] = pd.to_numeric(lg[c], errors="coerce")
-    lg_avg = (lg[lg["PitchType"].isin(prof.keys())]
-             .groupby(["Pitcher", "PitchType"])
-             .agg(IVB=("InducedVertBreak", "mean"), HB=("HorzBreak", "mean"), N=("PitchType", "count"))
-             .reset_index())
-    lg_avg = lg_avg[(lg_avg["N"] >= 10) & (lg_avg["Pitcher"] != pitcher_name)]
-
-    fig = go.Figure()
-    for pt in prof:
-        color = PITCH_COLORS.get(pt, "#64748b")
-        sub = lg_avg[lg_avg["PitchType"] == pt]
-        if len(sub):
-            fig.add_trace(go.Scatter(x=sub["HB"], y=sub["IVB"], mode="markers", showlegend=False,
-                                     marker=dict(color=color, size=6, opacity=0.18), hoverinfo="skip"))
-    for pt, d in prof.items():
-        color = PITCH_COLORS.get(pt, "#64748b")
-        fig.add_trace(go.Scatter(x=[d["hb"]], y=[d["ivb"]], mode="markers+text", name=pt,
-                                 text=[pt], textposition="top center",
-                                 marker=dict(color=color, size=18, symbol="star",
-                                            line=dict(color="#1e293b", width=1.5))))
-    fig.add_hline(y=0, line_color="#cbd5e1"); fig.add_vline(x=0, line_color="#cbd5e1")
-    fig.update_layout(height=460, plot_bgcolor="#FFFFFF", paper_bgcolor="#FFFFFF",
-                      font=dict(color="#1e293b"), showlegend=False,
-                      xaxis=dict(title="Horizontal Break (in)", range=[-26, 26], gridcolor="#E2E8F0",
-                                zeroline=False, scaleanchor="y", scaleratio=1),
-                      yaxis=dict(title="Induced Vert Break (in)", range=[-24, 32], gridcolor="#E2E8F0",
-                                zeroline=False))
-    st.plotly_chart(fig, use_container_width=True, key=f"sr_p_move_{pitcher_name}")
-    st.caption("Large stars = this pitcher's average movement per pitch type. Faded dots = every "
-              "other pitcher in the league averaging 10+ of that same pitch type this season.")
-
-
-@st.cache_data(ttl=600, max_entries=2)
-def _league_pitcher_benchmarks(_hash):
-    """League-wide (pooled, every pitcher/every team) FIP/xFIP for 'Lg avg' reference text."""
-    return _season_pitcher_fip_metrics(df_all)
-
-
-def _render_pitcher_season_report(pitcher):
-    pp_all = df_all[df_all["Pitcher"] == pitcher].copy()
-    throws = pp_all["PitcherThrows"].dropna().iloc[0] if pp_all["PitcherThrows"].notna().any() else "?"
-    throws_lbl = {"Right": "RHP", "Left": "LHP"}.get(throws, throws)
-
-    _sr_banner(f"{player_last(pitcher)} &middot; {throws_lbl}")
-
-    _sr_section("Official Season Line")
-    off_row = {}
-    for lbl, key in [("G", "app"), ("GS", "gs"), ("W", "w"), ("L", "l"), ("SV", "sv"), ("IP", "ip"),
-                      ("H", "h"), ("ER", "er"), ("BB", "bb"), ("SO", "so"), ("ERA", "era"), ("WHIP", "whip")]:
-        v = get_official_stat(pitcher, key)
-        if v is not None:
-            off_row[lbl] = (f"{v:.2f}" if key in ("era", "whip", "ip") else str(int(v)))
-    if off_row:
-        st.dataframe(pd.DataFrame([off_row]), use_container_width=True, hide_index=True)
-    else:
-        st.caption("No Data/official_stats.csv loaded yet — add the season stat export and this "
-                   "fills in automatically.")
-
-    st.divider()
-    tab_overall, tab_rhh, tab_lhh = st.tabs(["Overall", "vs Righties (RHH)", "vs Lefties (LHH)"])
-    with tab_overall:
-        _render_pitcher_split(pitcher, pp_all, "Overall")
-        _sr_section("Movement vs League")
-        _render_movement_vs_league(pitcher, pp_all)
-        _sr_section("Tunneling")
-        prof = None
-        try:
-            import matchup_model as mm
-            prof = mm.pitcher_arsenal_profile(pp_all, min_n=15)
-        except Exception as e:
-            st.caption(f"Tunneling unavailable: {type(e).__name__} — {e}")
-        if prof is not None:
-            if len(prof) >= 2:
-                trows = mm.tunnel_pairs(prof)
-                tdf = pd.DataFrame(trows).sort_values("score", ascending=False)
-                tdf["release_gap"] = tdf["release_gap"].round(1)
-                tdf["move_sep"] = tdf["move_sep"].round(1)
-                tdf["velo_gap"] = tdf["velo_gap"].round(1)
-                tdf = tdf.rename(columns={"a": "Pitch A", "b": "Pitch B", "release_gap": "Release Gap (in)",
-                                          "move_sep": "Movement Sep (in)", "velo_gap": "Velo Gap", "grade": "Grade"})
-                st.dataframe(tdf[["Pitch A", "Pitch B", "Release Gap (in)", "Movement Sep (in)", "Velo Gap", "Grade"]],
-                            use_container_width=True, hide_index=True)
-            else:
-                st.caption("Needs 2+ pitch types with 15+ thrown to grade tunneling.")
-        st.caption("Movement and tunneling reflect his whole-season arsenal — they aren't split by "
-                  "batter hand since a pitcher's own release/shape doesn't change by who's up.")
-    with tab_rhh:
-        _render_pitcher_split(pitcher, pp_all[pp_all["BatterSide"] == "Right"], "vs RHH")
-    with tab_lhh:
-        _render_pitcher_split(pitcher, pp_all[pp_all["BatterSide"] == "Left"], "vs LHH")
-
-
-def _render_pitcher_split(pitcher, pp, split_choice):
-    s = _pitcher_season_stats(pitcher, pp)
-
-    _sr_section("Stuff+ by Pitch")
-    if len(s["Mix"]):
-        cols = st.columns(len(s["Mix"]))
-        for i, row in s["Mix"].iterrows():
-            with cols[i]:
-                sp = row.get("StuffPlus")
-                color = PITCH_COLORS.get(row["PitchType"], "#64748b")
-                val = f"{sp:.0f}" if pd.notna(sp) else "—"
-                st.markdown(
-                    f"<div style='text-align:center;border:1.5px solid {color};border-radius:8px;padding:8px;'>"
-                    f"<div style='color:{color};font-weight:700;font-size:.72rem;text-transform:uppercase;'>"
-                    f"{row['PitchType']}</div>"
-                    f"<div style='font-size:1.5rem;font-weight:800;color:#000 !important;'>{val}</div>"
-                    f"<div style='font-size:.68rem;color:#64748b;'>Stuff+</div></div>",
-                    unsafe_allow_html=True)
-    else:
-        st.caption("No pitch-type data.")
-
-    _sr_section("Overall Pitch Mix" + ("" if split_choice == "Overall" else f" ({split_choice})"))
-    if len(s["Mix"]):
-        disp = s["Mix"].copy()
-        disp["Usage%"] = disp["Pct"].map(lambda v: f"{v:.0f}%")
-        disp["Velo"] = disp["AvgVelo"].map(lambda v: f"{v:.1f}" if pd.notna(v) else "—")
-        cols_show = ["PitchType", "Usage%", "Count", "Velo"]
-        if "AvgIVB" in disp.columns:
-            disp["IVB"] = disp["AvgIVB"].map(lambda v: f"{v:.1f}" if pd.notna(v) else "—")
-            cols_show.append("IVB")
-        if "AvgHB" in disp.columns:
-            disp["HB"] = disp["AvgHB"].map(lambda v: f"{v:.1f}" if pd.notna(v) else "—")
-            cols_show.append("HB")
-        st.dataframe(disp[cols_show], use_container_width=True, hide_index=True)
-    else:
-        st.caption("No pitch-type data.")
-
-    _sr_section("Location Numbers — Attack Zones")
-    if s["AttackZones"]:
-        zdf = pd.DataFrame([{"Zone": r["Zone"], "His %": f"{r['His %']:.0f}%",
-                            "League %": f"{r['League %']:.0f}%"} for r in s["AttackZones"]])
-        st.dataframe(zdf, use_container_width=True, hide_index=True)
-    else:
-        st.caption("Not enough located pitches for a zone profile.")
-
-    _sr_section("Full Count Matrix")
-    if s["CountMatrix"]:
-        st.markdown(_count_matrix_html(s["CountMatrix"], s["PitchTypes"], s["CountTotals"], s["AllCounts"]),
-                   unsafe_allow_html=True)
-    else:
-        st.caption("Count data not available.")
-
-    _sr_section("Location Heat Maps")
-    hh1, hh2, hh3 = st.columns(3)
-    pz = (pp[pp["PlateLocSide"].notna() & pp["PlateLocHeight"].notna()]
-         if "PlateLocSide" in pp.columns else pp.iloc[0:0])
-    with hh1:
-        st.caption("Pitch Location")
-        if len(pz) >= 5:
-            _render_kde_heatmap(pz, weight_col=None, key_suffix=f"sr_p_loc_{pitcher}_{split_choice}")
-        else:
-            st.info("Not enough location data.")
-    with hh2:
-        st.caption("Hard Contact Allowed")
-        bip = pz[pz["ExitSpeed"].notna()] if len(pz) else pz
-        if len(bip) >= 5:
-            _render_kde_heatmap(bip, weight_col="ExitSpeed", key_suffix=f"sr_p_ev_{pitcher}_{split_choice}")
-        else:
-            st.info("Not enough contact data.")
-    with hh3:
-        st.caption("Whiff Zones")
-        sw = pz[pz["PitchCall"].isin(_SR_SWING_C)].copy() if len(pz) else pz
-        if len(sw):
-            sw["_whiff_w"] = sw["PitchCall"].eq("StrikeSwinging").astype(float)
-        if len(sw) >= 5:
-            _render_kde_heatmap(sw, weight_col="_whiff_w", key_suffix=f"sr_p_wh_{pitcher}_{split_choice}")
-        else:
-            st.info("Not enough swing data.")
-
-    _sr_section("FIP / xFIP / xERA")
-    fm = s["FipMetrics"]
-    lg_fm = _league_pitcher_benchmarks((len(df_all), tuple(df_all.columns)))
-    fc = st.columns(4)
-    fc[0].metric("IP", fm["IP"])
-    fc[1].metric("FIP", f"{fm['FIP']:.2f}" if fm["FIP"] is not None else "—",
-               delta=(f"Lg: {lg_fm['FIP']:.2f}" if lg_fm["FIP"] is not None else None), delta_color="off")
-    fc[2].metric("xFIP", f"{fm['xFIP']:.2f}" if fm["xFIP"] is not None else "—",
-               delta=(f"Lg: {lg_fm['xFIP']:.2f}" if lg_fm["xFIP"] is not None else None), delta_color="off")
-    fc[3].metric("xERA*", f"{s['xERA']:.2f}" if s["xERA"] is not None else "—",
-               delta=f"Lg: {_SEASON_FIP_CONSTANT:.2f}", delta_color="off")
-    st.caption("*xERA is a DiamondIntel estimate built from tracked exit velo/launch angle allowed, "
-              "rescaled to a runs/9 basis — not Statcast's proprietary metric.")
-
-
-def _build_pitcher_season_pdf(pitcher_name, throws_lbl, off_row, splits, overall_pp,
-                              logo_path="assets/nashua_logo.png"):
-    """splits: {"Overall": stats, "vs RHH": stats, "vs LHH": stats}, each from
-    _pitcher_season_stats(). overall_pp: full-season unfiltered pitches, for
-    tunneling + movement-vs-league (neither is meaningfully hand-specific).
-    Mirrors the on-screen Season Report page: monochrome black/white/gray
-    layout (no team color), one full page per split with the same stat
-    cards and tables shown on-screen, not a condensed comparison table."""
-    import io, os
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image,
-                                    PageBreak, KeepTogether)
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    from reportlab.lib.units import inch
-
-    # Monochrome, print-shop palette — no team color, reads like an official
-    # scouting/stat sheet rather than a branded flyer.
-    RED = colors.HexColor("#1A1A1A")     # kept as RED for call-site compat; now near-black
-    INK = colors.HexColor("#000000")
-    GRAY = colors.HexColor("#4B4B4B")
-    PANEL = colors.HexColor("#F4F4F4")
-    STRIPE = colors.HexColor("#F0F0F0")
-    RULE = colors.HexColor("#B9B9B9")
-
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=0.55*inch, bottomMargin=0.55*inch)
-    styles = getSampleStyleSheet()
-    story = []
-
-    def _rule(height=2.0):
-        t = Table([[""]], colWidths=[7.4*inch], rowHeights=[height])
-        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), RED),
-                              ("TOPPADDING", (0, 0), (-1, -1), 0),
-                              ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
-        return t
-
-    title = ParagraphStyle("sp_t", parent=styles["Title"], textColor=INK, fontSize=22, spaceAfter=0, alignment=0)
-    sub = ParagraphStyle("sp_s", parent=styles["Normal"], textColor=GRAY, fontSize=12, spaceAfter=0)
-    title_block = [Paragraph("Brookhaven Bandits Season Report", title),
-                   Paragraph(f"{pitcher_name} ({throws_lbl})", sub)]
-    if logo_path and os.path.exists(logo_path):
-        try:
-            head = Table([[Image(logo_path, width=0.7*inch, height=0.7*inch), title_block]],
-                        colWidths=[0.85*inch, 6.55*inch])
-        except Exception:
-            head = Table([[title_block]], colWidths=[7.4*inch])
-    else:
-        head = Table([[title_block]], colWidths=[7.4*inch])
-    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (0, 0), 0)]))
-    story += [head, Spacer(1, 8), _rule(1.6), Spacer(1, 12)]
-
-    h = ParagraphStyle("sp_h", parent=styles["Heading2"], textColor=INK, fontSize=14, spaceBefore=12, spaceAfter=4)
-    h2 = ParagraphStyle("sp_h2", parent=styles["Heading1"], textColor=INK, fontSize=18, spaceBefore=2, spaceAfter=8)
-    body = ParagraphStyle("sp_b", parent=styles["Normal"], textColor=INK, fontSize=9.5, spaceAfter=2)
-    foot = ParagraphStyle("sp_f", parent=styles["Normal"], textColor=GRAY, fontSize=8)
-
-    def _section(t):
-        story.append(Paragraph(t, h)); story.append(_rule(1.0)); story.append(Spacer(1, 6))
-
-    def _tbl(data, col_widths=None, dense=False):
-        """dense=True is for the 13-column Full Count Matrix — tighter font/
-        padding so a dozen narrow columns still fit the page width without
-        every header cell wrapping."""
-        fs, pad_h, pad_v = (7.5, 3, 4) if dense else (9.5, 6, 5.5)
-        t = Table(data, hAlign="LEFT", colWidths=col_widths)
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), INK), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("TEXTCOLOR", (0, 1), (-1, -1), INK), ("FONTSIZE", (0, 0), (-1, -1), fs),
-            ("GRID", (0, 0), (-1, -1), 0.6, RULE), ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, STRIPE]),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("TOPPADDING", (0, 0), (-1, -1), pad_v), ("BOTTOMPADDING", (0, 0), (-1, -1), pad_v),
-            ("LEFTPADDING", (0, 0), (-1, -1), pad_h), ("RIGHTPADDING", (0, 0), (-1, -1), pad_h)]))
-        return t
-
-    def _card(label, value, sub_txt, width):
-        lbl_s = ParagraphStyle("pc_l", fontName="Helvetica-Bold", fontSize=7, textColor=GRAY, leading=8.5)
-        val_s = ParagraphStyle("pc_v", fontName="Helvetica-Bold", fontSize=16, textColor=INK, leading=18)
-        sub_s = ParagraphStyle("pc_s", fontName="Helvetica", fontSize=7, textColor=GRAY, leading=8.5)
-        rows = [[Paragraph(label.upper(), lbl_s)], [Paragraph(str(value), val_s)],
-                [Paragraph(sub_txt if sub_txt else "&nbsp;", sub_s)]]
-        t = Table(rows, colWidths=[width])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), PANEL), ("LINEBEFORE", (0, 0), (0, -1), 2.2, INK),
-            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 5)]))
-        return t
-
-    def _card_row(specs):
-        n = len(specs)
-        gap = 0.08 * inch
-        card_w = (7.4 * inch - gap * (n - 1)) / n if n else 7.4 * inch
-        row_data, col_widths = [], []
-        for i, (label, value, sub_txt) in enumerate(specs):
-            row_data.append(_card(label, value, sub_txt, card_w))
-            col_widths.append(card_w)
-            if i < n - 1:
-                row_data.append(""); col_widths.append(gap)
-        t = Table([row_data], colWidths=col_widths)
-        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
-                              ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                              ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 12)]))
-        return t
-
-    _section("Official Season Line")
-    if off_row:
-        story.append(_tbl([list(off_row.keys()), [str(v) for v in off_row.values()]]))
-    else:
-        story.append(Paragraph("No Data/official_stats.csv on file yet.", body))
-    story.append(Spacer(1, 10))
-
-    lg_fm = _league_pitcher_benchmarks((len(df_all), tuple(df_all.columns)))
-
-    for i, (sp_key, sp_label) in enumerate(
-            [("Overall", "Overall"), ("vs RHH", "vs Righties (RHH)"), ("vs LHH", "vs Lefties (LHH)")]):
-        s = splits[sp_key]
-        if i > 0:
-            story.append(PageBreak())
-        story.append(Paragraph(sp_label, h2)); story.append(_rule(1.6)); story.append(Spacer(1, 8))
-
-        sp_content = [Paragraph("Stuff+ by Pitch", h)]
-        if len(s["Mix"]):
-            specs = []
-            for _, r in s["Mix"].iterrows():
-                sp_val = r.get("StuffPlus")
-                specs.append((r["PitchType"], f"{sp_val:.0f}" if pd.notna(sp_val) else "—", None))
-            sp_content.append(_card_row(specs))
-        else:
-            sp_content.append(Paragraph("No pitch-type data.", body))
-        story.append(KeepTogether(sp_content))
-
-        pm_content = [Paragraph("Pitch Mix", h), _rule(1.1), Spacer(1, 5)]
-        if len(s["Mix"]):
-            disp = s["Mix"]
-            rows = [["Pitch", "Usage%", "Pitches", "Velo", "IVB", "HB"]]
-            for _, r in disp.iterrows():
-                rows.append([r["PitchType"], f"{r['Pct']:.0f}%", str(int(r["Count"])),
-                            f"{r['AvgVelo']:.1f}" if pd.notna(r["AvgVelo"]) else "—",
-                            f"{r['AvgIVB']:.1f}" if "AvgIVB" in disp.columns and pd.notna(r.get("AvgIVB")) else "—",
-                            f"{r['AvgHB']:.1f}" if "AvgHB" in disp.columns and pd.notna(r.get("AvgHB")) else "—"])
-            pm_content.append(_tbl(rows))
-        else:
-            pm_content.append(Paragraph("No pitch-type data.", body))
-        story.append(KeepTogether(pm_content))
-
-        az_content = [Paragraph("Location Numbers — Attack Zones", h), _rule(1.1), Spacer(1, 5)]
-        if s["AttackZones"]:
-            az_rows = [["Zone", "His %", "League %"]]
-            for r in s["AttackZones"]:
-                az_rows.append([r["Zone"], f"{r['His %']:.0f}%", f"{r['League %']:.0f}%"])
-            az_content.append(_tbl(az_rows))
-        else:
-            az_content.append(Paragraph("Not enough located pitches.", body))
-        story.append(KeepTogether(az_content))
-
-        cm_content = [Paragraph("Full Count Matrix", h), _rule(1.1), Spacer(1, 5)]
-        all_pt = s["PitchTypes"]
-        if s["CountMatrix"] and all_pt:
-            header_row = ["Pitch"] + [f"{b}-{s_}" for b, s_ in s["AllCounts"]]
-            rows = [header_row]
-            for pt in all_pt:
-                row = [pt]
-                for bs in s["AllCounts"]:
-                    n = s["CountTotals"].get(bs, 0)
-                    pct = s["CountMatrix"].get(pt, {}).get(bs, 0)
-                    row.append("—" if n == 0 else (f"{pct:.0%}" if pct > 0 else "0%"))
-                rows.append(row)
-            cm_content.append(_tbl(rows, col_widths=[0.6*inch] + [0.53*inch]*12, dense=True))
-        else:
-            cm_content.append(Paragraph("Count data not available.", body))
-        story.append(KeepTogether(cm_content))
-
-        lhm_content = [Paragraph("Location Heat Maps", h), _rule(1.1), Spacer(1, 5)]
-        pz = (s["PitchesClean"][s["PitchesClean"]["PlateLocSide"].notna() &
-             s["PitchesClean"]["PlateLocHeight"].notna()] if "PlateLocSide" in s["PitchesClean"].columns
-             else s["PitchesClean"].iloc[0:0])
-        bip = pz[pz["ExitSpeed"].notna()] if len(pz) else pz
-        sw = pz[pz["PitchCall"].isin(_SR_SWING_C)].copy() if len(pz) else pz
-        if len(sw):
-            sw["_whiff_w"] = sw["PitchCall"].eq("StrikeSwinging").astype(float)
-        panels = [(pz, None, "Pitch Location"), (bip, "ExitSpeed", "Hard Contact"), (sw, "_whiff_w", "Whiffs")]
-        imgs = [_kde_heatmap_png(d, weight_col=w) if len(d) >= 5 else None for d, w, _ in panels]
-        if any(imgs):
-            cap_row = [Paragraph(f"<b>{lbl}</b>", body) for _, _, lbl in panels]
-            img_row = [Image(io.BytesIO(png), width=2.1*inch, height=2.35*inch) if png
-                      else Paragraph("Not enough data", body) for png in imgs]
-            t = Table([cap_row, img_row], colWidths=[2.2*inch]*3)
-            t.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-            lhm_content.append(t)
-        else:
-            lhm_content.append(Paragraph("Not enough location data for heat maps.", body))
-        story.append(KeepTogether(lhm_content))
-
-        if sp_key == "Overall":
-            mv_content = [Paragraph("Movement vs League", h), _rule(1.1), Spacer(1, 5)]
-            mv_png = _movement_vs_league_png(pitcher_name, overall_pp)
-            if mv_png:
-                mv_content.append(Image(io.BytesIO(mv_png), width=4.2*inch, height=3.7*inch))
-            else:
-                mv_content.append(Paragraph("Not enough pitches of any single type to plot movement.", body))
-            story.append(KeepTogether(mv_content))
-
-            tn_content = [Paragraph("Tunneling", h), _rule(1.1), Spacer(1, 5)]
-            prof = None
-            try:
-                import matchup_model as mm
-                prof = mm.pitcher_arsenal_profile(overall_pp, min_n=15)
-            except Exception as e:
-                tn_content.append(Paragraph(f"Tunneling unavailable: {type(e).__name__} — {e}", body))
-            if prof is not None:
-                if len(prof) >= 2:
-                    trows = mm.tunnel_pairs(prof)
-                    trows.sort(key=lambda r: -r["score"])
-                    rows = [["Pitch A", "Pitch B", "Release Gap (in)", "Move Sep (in)", "Velo Gap", "Grade"]]
-                    for r in trows:
-                        rows.append([r["a"], r["b"], f"{r['release_gap']:.1f}", f"{r['move_sep']:.1f}",
-                                    f"{r['velo_gap']:.1f}", r["grade"]])
-                    tn_content.append(_tbl(rows))
-                else:
-                    tn_content.append(Paragraph("Needs 2+ pitch types with 15+ thrown to grade tunneling.", body))
-            tn_content.append(Paragraph("Movement and tunneling reflect his whole-season arsenal — not split "
-                                        "by batter hand.", foot))
-            story.append(KeepTogether(tn_content))
-
-        fip_content = [Paragraph("FIP / xFIP / xERA", h), _rule(1.1), Spacer(1, 5)]
-        fm = s["FipMetrics"]
-        fip_content.append(_card_row([
-            ("IP", fm["IP"], None),
-            ("FIP", f"{fm['FIP']:.2f}" if fm["FIP"] is not None else "—",
-             f"Lg: {lg_fm['FIP']:.2f}" if lg_fm["FIP"] is not None else None),
-            ("xFIP", f"{fm['xFIP']:.2f}" if fm["xFIP"] is not None else "—",
-             f"Lg: {lg_fm['xFIP']:.2f}" if lg_fm["xFIP"] is not None else None),
-            ("xERA*", f"{s['xERA']:.2f}" if s["xERA"] is not None else "—", f"Lg: {_SEASON_FIP_CONSTANT:.2f}"),
-        ]))
-        if sp_key == "Overall":
-            fip_content.append(Spacer(1, 4))
-            fip_content.append(Paragraph("*xERA is a DiamondIntel estimate built from tracked exit velo/launch "
-                                         "angle allowed, rescaled to a runs/9 basis &mdash; not Statcast's "
-                                         "proprietary metric.", foot))
-        story.append(KeepTogether(fip_content))
-
-    doc.build(story)
-    return buf.getvalue()
-
-
 if page == "Season Report":
     st.title("End-of-Season Player Report")
-    st.caption("Post-season wrap-up reports for players on their way out — rebuilt from the data "
-              "every time this loads, so the last games of the season are included automatically. "
-              "Add Data/official_stats.csv (built from the league stats PDF, once the season is "
-              "final) to fill in the official season line at the top of each report — it also "
-              "takes over K% and BB% on the Overall tab.")
+    st.caption("Season-end stat report for each hitter and pitcher.")
 
     sr_type = st.radio("Report type", ["Hitter", "Pitcher"], horizontal=True, key="sr_type")
 
