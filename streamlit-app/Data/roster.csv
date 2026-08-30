@@ -1,11 +1,11 @@
-player_id,class_year,division,school_type,school,team
-"Boyd, Marcus",JR,D2,4YR,Millbrook State,BRK_BAN
-"Reyes, Julian",JR,D1,4YR,Fairmont College,BRK_BAN
-"Callahan, Derek",SO,D1,4YR,Ashcombe University,BRK_BAN
-"Brooks, Tyler",SO,D1,4YR,Ashcombe University,BRK_BAN
-"Frost, Adam",SR,D2,4YR,Millbrook State,BRK_BAN
-"Doyle, Hunter",SR,D2,4YR,Sterling College,CON_RIV
-"Sorensen, Blake",SO,D1,4YR,Northgate University,CON_RIV
-"Marsh, Eli",JR,D1,4YR,Coastal Ridge University,CON_RIV
-"Delgado, Marcus",JR,D1,4YR,Northgate University,CON_RIV
-"Dunmore, Chris",SO,D2,4YR,Brightwater College,CON_RIV
+player_id,class_year,division,school_type,school
+"Boyd, Marcus",JR,D2,4YR,Millbrook State
+"Reyes, Julian",JR,D1,4YR,Fairmont College
+"Callahan, Derek",SO,D1,4YR,Ashcombe University
+"Brooks, Tyler",SO,D1,4YR,Ashcombe University
+"Frost, Adam",SR,D2,4YR,Millbrook State
+"Doyle, Hunter",SR,D2,4YR,Sterling College
+"Sorensen, Blake",SO,D1,4YR,Northgate University
+"Marsh, Eli",JR,D1,4YR,Coastal Ridge University
+"Delgado, Marcus",JR,D1,4YR,Northgate University
+"Dunmore, Chris",SO,D2,4YR,Brightwater College

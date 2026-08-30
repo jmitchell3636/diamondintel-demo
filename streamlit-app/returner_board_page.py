@@ -543,12 +543,7 @@ def _render_pitchers(DATA_DIR, EXCLUDED_TEAMS, roster, matched_ids, goto_pitcher
 
 def _render_hitters(df_all, EXCLUDED_TEAMS, roster, matched_ids, goto_hitter,
                     last_player, team_label=None):
-    st.caption(
-        "Hitter version of the board. fcbl/ has no hitter reliability or "
-        "shrinkage model yet (a documented gap -- see docs/README_FCBL.md), "
-        "so this ranks on raw wOBA x Chance We Get Him Back rather than a "
-        "shrunk, uncertainty-aware run value like the pitcher board."
-    )
+    st.caption("Ranked by wOBA x Chance We Get Him Back.")
     if df_all is None or df_all.empty:
         st.warning("No pitch-level data available to build hitter stats.")
         return
@@ -647,18 +642,12 @@ def render(DATA_DIR, EXCLUDED_TEAMS=frozenset(), goto_pitcher=None,
     last_kind = st.session_state.pop("rb_last_kind", None)
 
     st.title("Returner Board")
-    st.caption(
-        "Cross-league bring-back priority. Built from every pitch in `Data/` "
-        "involving Nashua, so an opposing player's line is only what he did "
-        "against Nashua, not his full FCBL season -- expect thin samples."
-    )
+    st.caption("Cross-league bring-back priority for every pitcher and hitter in the data.")
 
     with st.expander("Roster CSV (optional -- sharpens class / division / age)"):
         st.caption(
-            "Needs `player_id` matching the TrackMan `Pitcher`/`Batter` string "
-            "exactly, plus `class_year` and `division`. Add `age` or "
-            "`grad_year` if you have them -- without one, every player "
-            "defaults to SO / D1. Covers both tabs below."
+            "Needs `player_id` matching the TrackMan `Pitcher`/`Batter` string, "
+            "plus `class_year` and `division`."
         )
         uploaded_roster = st.file_uploader("roster.csv", type="csv",
                                            key="rb_roster")
