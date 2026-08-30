@@ -33,9 +33,6 @@ DATA_DIR = _find_data_dir()
 TEAM_LABELS = {
     "BRK_BAN": "Brookhaven Bandits",
     "CON_RIV": "Concord River Cats",
-    "DOV_ANC": "Dover Anchors",
-    "POR_PRI": "Portsmouth Privateers",
-    "MAN_MIL": "Manchester Millers",
 }
 
 # Just the city/region, no mascot -- used on the Returner Board (Front Office)
@@ -43,9 +40,6 @@ TEAM_LABELS = {
 TEAM_LOCATIONS = {
     "BRK_BAN": "Brookhaven",
     "CON_RIV": "Concord",
-    "DOV_ANC": "Dover",
-    "POR_PRI": "Portsmouth",
-    "MAN_MIL": "Manchester",
 }
 
 # Teams hidden from every team/opponent picker in the app (they never show up
@@ -104,23 +98,11 @@ def _player_options_reports(series):
                   if not _is_removed(n) and not _is_report_hidden(n))
 
 ROSTER = {
-    "Callahan, Derek":  "OF",
-    "Whitfield, Owen":  "OF",
-    "Reyes, Julian":    "1B",
-    "Pike, Jordan":     "OF",
     "Boyd, Marcus":     "C",
-    "Alvarez, Sam":     "IF",
-    "Odom, Casey":      "IF",
-    "Nakashima, Kevin": "IF",
-    "Lang, Trevor":     "IF",
-    "Corbin, Miles":    "IF",
-    "Trager, Will":     "C",
+    "Reyes, Julian":    "1B",
+    "Callahan, Derek":  "OF",
     "Brooks, Tyler":    "RHP",
-    "Bennett, Cole":    "LHP",
     "Frost, Adam":      "RHP",
-    "Delacruz, Ray":    "RHP",
-    "Ito, Mason":       "LHP",
-    "Sharpe, Devon":    "RHP",
 }
 
 
@@ -1011,36 +993,16 @@ def _compute_park_factors(_hash):
 # league stats PDF is on file. Delete this block once official_stats.csv
 # is added and this falls back to reading the real file automatically.
 _DEMO_OFFICIAL_STATS = [
-    {"player": "Callahan, Derek", "g": 30, "ab": 118, "h": 39, "doubles": 9, "triples": 1, "hr": 4,
-     "rbi": 22, "bb": 14, "so": 19, "sb": 8, "ba": 0.331, "obp": 0.402, "slg": 0.525, "ops": 0.927},
-    {"player": "Whitfield, Owen", "g": 30, "ab": 115, "h": 35, "doubles": 7, "triples": 0, "hr": 6,
-     "rbi": 27, "bb": 16, "so": 24, "sb": 3, "ba": 0.304, "obp": 0.389, "slg": 0.522, "ops": 0.911},
-    {"player": "Reyes, Julian", "g": 28, "ab": 104, "h": 30, "doubles": 6, "triples": 1, "hr": 2,
-     "rbi": 15, "bb": 10, "so": 17, "sb": 5, "ba": 0.288, "obp": 0.351, "slg": 0.423, "ops": 0.774},
-    {"player": "Pike, Jordan", "g": 29, "ab": 109, "h": 33, "doubles": 8, "triples": 0, "hr": 5,
-     "rbi": 24, "bb": 9, "so": 22, "sb": 2, "ba": 0.303, "obp": 0.356, "slg": 0.514, "ops": 0.870},
-    {"player": "Boyd, Marcus", "g": 27, "ab": 97, "h": 25, "doubles": 4, "triples": 0, "hr": 3,
-     "rbi": 18, "bb": 8, "so": 20, "sb": 0, "ba": 0.258, "obp": 0.314, "slg": 0.392, "ops": 0.706},
-    {"player": "Alvarez, Sam", "g": 26, "ab": 92, "h": 24, "doubles": 5, "triples": 1, "hr": 1,
-     "rbi": 11, "bb": 7, "so": 18, "sb": 6, "ba": 0.261, "obp": 0.313, "slg": 0.370, "ops": 0.683},
-    {"player": "Odom, Casey", "g": 28, "ab": 101, "h": 27, "doubles": 6, "triples": 0, "hr": 2,
-     "rbi": 14, "bb": 11, "so": 21, "sb": 4, "ba": 0.267, "obp": 0.339, "slg": 0.386, "ops": 0.725},
-    {"player": "Nakashima, Kevin", "g": 25, "ab": 88, "h": 21, "doubles": 3, "triples": 0, "hr": 1,
-     "rbi": 9, "bb": 6, "so": 16, "sb": 3, "ba": 0.239, "obp": 0.287, "slg": 0.307, "ops": 0.594},
-    {"player": "Lang, Trevor", "g": 24, "ab": 80, "h": 19, "doubles": 4, "triples": 0, "hr": 2,
-     "rbi": 10, "bb": 5, "so": 15, "sb": 1, "ba": 0.237, "obp": 0.282, "slg": 0.362, "ops": 0.645},
-    {"player": "Brooks, Tyler", "app": 11, "gs": 11, "w": 6, "l": 2, "sv": 0, "ip": 58.0,
-     "h": 48, "er": 22, "bb": 16, "so": 64, "era": 3.41, "whip": 1.10},
-    {"player": "Frost, Adam", "app": 9, "gs": 5, "w": 3, "l": 2, "sv": 0, "ip": 32.1,
-     "h": 30, "er": 15, "bb": 13, "so": 29, "era": 4.18, "whip": 1.33},
-    {"player": "Sharpe, Devon", "app": 14, "gs": 0, "w": 2, "l": 1, "sv": 3, "ip": 19.2,
-     "h": 15, "er": 7, "bb": 9, "so": 22, "era": 3.20, "whip": 1.22},
-    {"player": "Ito, Mason", "app": 15, "gs": 0, "w": 1, "l": 0, "sv": 1, "ip": 17.0,
-     "h": 14, "er": 6, "bb": 7, "so": 19, "era": 3.18, "whip": 1.24},
-    {"player": "Delacruz, Ray", "app": 13, "gs": 0, "w": 1, "l": 2, "sv": 0, "ip": 15.1,
-     "h": 16, "er": 9, "bb": 8, "so": 13, "era": 5.28, "whip": 1.57},
-    {"player": "Bennett, Cole", "app": 12, "gs": 0, "w": 0, "l": 1, "sv": 2, "ip": 13.2,
-     "h": 11, "er": 5, "bb": 6, "so": 15, "era": 3.29, "whip": 1.24},
+    {"player": "Boyd, Marcus", "g": 6, "ab": 36, "h": 15, "doubles": 3, "triples": 0, "hr": 2,
+     "rbi": 11, "bb": 3, "so": 13, "sb": 0, "ba": 0.417, "obp": 0.462, "slg": 0.694, "ops": 1.156},
+    {"player": "Reyes, Julian", "g": 6, "ab": 38, "h": 12, "doubles": 2, "triples": 0, "hr": 1,
+     "rbi": 8, "bb": 0, "so": 16, "sb": 1, "ba": 0.316, "obp": 0.316, "slg": 0.447, "ops": 0.763},
+    {"player": "Callahan, Derek", "g": 6, "ab": 38, "h": 11, "doubles": 2, "triples": 1, "hr": 1,
+     "rbi": 7, "bb": 0, "so": 13, "sb": 3, "ba": 0.289, "obp": 0.289, "slg": 0.447, "ops": 0.736},
+    {"player": "Brooks, Tyler", "app": 6, "gs": 6, "w": 4, "l": 1, "sv": 0, "ip": 30.0,
+     "h": 24, "er": 11, "bb": 8, "so": 34, "era": 3.30, "whip": 1.07},
+    {"player": "Frost, Adam", "app": 6, "gs": 0, "w": 1, "l": 2, "sv": 2, "ip": 12.0,
+     "h": 11, "er": 6, "bb": 5, "so": 13, "era": 4.50, "whip": 1.33},
 ]
 
 
@@ -8499,15 +8461,16 @@ elif page == "Player WAR":
     # file. SB/CS match the season stolen-base totals in _DEMO_OFFICIAL_STATS
     # above so the two demo data sets don't disagree with each other.
     _DEMO_OFFICIAL_FIELDING = [
-        {"Player": "Callahan, Derek", "Team": "BRK_BAN", "Position": "OF", "G": 30, "PO": 58, "A": 3, "E": 2, "SB": 8, "CS": 2},
-        {"Player": "Whitfield, Owen", "Team": "BRK_BAN", "Position": "OF", "G": 30, "PO": 61, "A": 2, "E": 1, "SB": 3, "CS": 1},
-        {"Player": "Reyes, Julian", "Team": "BRK_BAN", "Position": "1B", "G": 28, "PO": 231, "A": 17, "E": 4, "SB": 5, "CS": 2},
-        {"Player": "Pike, Jordan", "Team": "BRK_BAN", "Position": "OF", "G": 29, "PO": 54, "A": 4, "E": 2, "SB": 2, "CS": 1},
-        {"Player": "Boyd, Marcus", "Team": "BRK_BAN", "Position": "C", "G": 27, "PO": 178, "A": 21, "E": 3, "SB": 0, "CS": 1},
-        {"Player": "Alvarez, Sam", "Team": "BRK_BAN", "Position": "IF", "G": 26, "PO": 44, "A": 68, "E": 6, "SB": 6, "CS": 2},
-        {"Player": "Odom, Casey", "Team": "BRK_BAN", "Position": "IF", "G": 28, "PO": 49, "A": 71, "E": 5, "SB": 4, "CS": 1},
-        {"Player": "Nakashima, Kevin", "Team": "BRK_BAN", "Position": "IF", "G": 25, "PO": 38, "A": 55, "E": 7, "SB": 3, "CS": 2},
-        {"Player": "Lang, Trevor", "Team": "BRK_BAN", "Position": "IF", "G": 24, "PO": 41, "A": 52, "E": 8, "SB": 1, "CS": 1},
+        {"Player": "Boyd, Marcus", "Team": "BRK_BAN", "Position": "C", "G": 6, "PO": 38, "A": 5, "E": 1, "SB": 0, "CS": 2},
+        {"Player": "Reyes, Julian", "Team": "BRK_BAN", "Position": "1B", "G": 6, "PO": 49, "A": 4, "E": 1, "SB": 1, "CS": 0},
+        {"Player": "Callahan, Derek", "Team": "BRK_BAN", "Position": "OF", "G": 6, "PO": 12, "A": 1, "E": 0, "SB": 3, "CS": 1},
+        {"Player": "Brooks, Tyler", "Team": "BRK_BAN", "Position": "IF", "G": 6, "PO": 4, "A": 9, "E": 1, "SB": 0, "CS": 0},
+        {"Player": "Frost, Adam", "Team": "BRK_BAN", "Position": "IF", "G": 6, "PO": 3, "A": 7, "E": 1, "SB": 1, "CS": 0},
+        {"Player": "Doyle, Hunter", "Team": "CON_RIV", "Position": "C", "G": 6, "PO": 41, "A": 6, "E": 1, "SB": 0, "CS": 3},
+        {"Player": "Sorensen, Blake", "Team": "CON_RIV", "Position": "1B", "G": 6, "PO": 46, "A": 3, "E": 2, "SB": 2, "CS": 0},
+        {"Player": "Marsh, Eli", "Team": "CON_RIV", "Position": "OF", "G": 6, "PO": 11, "A": 0, "E": 1, "SB": 2, "CS": 1},
+        {"Player": "Delgado, Marcus", "Team": "CON_RIV", "Position": "IF", "G": 6, "PO": 5, "A": 8, "E": 0, "SB": 0, "CS": 0},
+        {"Player": "Dunmore, Chris", "Team": "CON_RIV", "Position": "IF", "G": 6, "PO": 2, "A": 6, "E": 2, "SB": 0, "CS": 0},
     ]
 
     @st.cache_data(ttl=300, max_entries=3)
@@ -8931,36 +8894,14 @@ elif page == "Starters vs Bullpen":
     # something to show for every club instead of sitting empty. Delete
     # this block once official_pitching_season.csv is added.
     _DEMO_OFFICIAL_PITCHING = [
-        {"Player": "Brooks, Tyler", "Team": "BRK_BAN", "APP": 11, "GS": 11, "W": 6, "L": 2, "SV": 0,
-         "IP": 58.0, "H": 48, "R": 26, "ER": 22, "BB": 16, "SO": 64, "HR": 5, "AB": 188},
-        {"Player": "Frost, Adam", "Team": "BRK_BAN", "APP": 9, "GS": 5, "W": 3, "L": 2, "SV": 0,
-         "IP": 32.1, "H": 30, "R": 17, "ER": 15, "BB": 13, "SO": 29, "HR": 3, "AB": 118},
-        {"Player": "Sharpe, Devon", "Team": "BRK_BAN", "APP": 14, "GS": 0, "W": 2, "L": 1, "SV": 3,
-         "IP": 19.2, "H": 15, "R": 8, "ER": 7, "BB": 9, "SO": 22, "HR": 1, "AB": 59},
-        {"Player": "Ito, Mason", "Team": "BRK_BAN", "APP": 15, "GS": 0, "W": 1, "L": 0, "SV": 1,
-         "IP": 17.0, "H": 14, "R": 7, "ER": 6, "BB": 7, "SO": 19, "HR": 1, "AB": 55},
-        {"Player": "Delacruz, Ray", "Team": "BRK_BAN", "APP": 13, "GS": 0, "W": 1, "L": 2, "SV": 0,
-         "IP": 15.1, "H": 16, "R": 11, "ER": 9, "BB": 8, "SO": 13, "HR": 2, "AB": 63},
-        {"Player": "Bennett, Cole", "Team": "BRK_BAN", "APP": 12, "GS": 0, "W": 0, "L": 1, "SV": 2,
-         "IP": 13.2, "H": 11, "R": 6, "ER": 5, "BB": 6, "SO": 15, "HR": 1, "AB": 43},
-        {"Player": "Delgado, Marcus", "Team": "CON_RIV", "APP": 10, "GS": 10, "W": 5, "L": 3, "SV": 0,
-         "IP": 52.0, "H": 47, "R": 26, "ER": 22, "BB": 17, "SO": 50, "HR": 6, "AB": 184},
-        {"Player": "Dunmore, Chris", "Team": "CON_RIV", "APP": 13, "GS": 3, "W": 2, "L": 3, "SV": 1,
-         "IP": 33.2, "H": 32, "R": 20, "ER": 17, "BB": 15, "SO": 31, "HR": 4, "AB": 125},
-        {"Player": "Hollis, Grant", "Team": "CON_RIV", "APP": 16, "GS": 0, "W": 1, "L": 1, "SV": 4,
-         "IP": 21.1, "H": 18, "R": 10, "ER": 9, "BB": 10, "SO": 24, "HR": 2, "AB": 71},
-        {"Player": "Halstrom, Owen", "Team": "DOV_ANC", "APP": 9, "GS": 9, "W": 3, "L": 5, "SV": 0,
-         "IP": 45.2, "H": 46, "R": 29, "ER": 25, "BB": 20, "SO": 38, "HR": 7, "AB": 180},
-        {"Player": "Yun, Parker", "Team": "DOV_ANC", "APP": 12, "GS": 0, "W": 1, "L": 2, "SV": 1,
-         "IP": 17.0, "H": 17, "R": 11, "ER": 10, "BB": 9, "SO": 15, "HR": 2, "AB": 67},
-        {"Player": "Ferris, Nate", "Team": "POR_PRI", "APP": 8, "GS": 8, "W": 2, "L": 5, "SV": 0,
-         "IP": 40.1, "H": 43, "R": 30, "ER": 26, "BB": 21, "SO": 33, "HR": 8, "AB": 169},
-        {"Player": "Locke, Bryan", "Team": "POR_PRI", "APP": 14, "GS": 0, "W": 0, "L": 3, "SV": 2,
-         "IP": 18.2, "H": 19, "R": 13, "ER": 12, "BB": 11, "SO": 17, "HR": 3, "AB": 75},
-        {"Player": "Sato, Reggie", "Team": "MAN_MIL", "APP": 10, "GS": 10, "W": 3, "L": 4, "SV": 0,
-         "IP": 48.0, "H": 45, "R": 27, "ER": 23, "BB": 19, "SO": 42, "HR": 6, "AB": 176},
-        {"Player": "Whipple, Dane", "Team": "MAN_MIL", "APP": 15, "GS": 0, "W": 1, "L": 1, "SV": 3,
-         "IP": 19.1, "H": 17, "R": 10, "ER": 9, "BB": 9, "SO": 20, "HR": 2, "AB": 67},
+        {"Player": "Brooks, Tyler", "Team": "BRK_BAN", "APP": 6, "GS": 6, "W": 4, "L": 1, "SV": 0,
+         "IP": 30.0, "H": 24, "R": 13, "ER": 11, "BB": 8, "SO": 34, "HR": 3, "AB": 105},
+        {"Player": "Frost, Adam", "Team": "BRK_BAN", "APP": 6, "GS": 0, "W": 1, "L": 2, "SV": 2,
+         "IP": 12.0, "H": 11, "R": 7, "ER": 6, "BB": 5, "SO": 13, "HR": 1, "AB": 45},
+        {"Player": "Delgado, Marcus", "Team": "CON_RIV", "APP": 6, "GS": 6, "W": 3, "L": 2, "SV": 0,
+         "IP": 28.0, "H": 25, "R": 15, "ER": 13, "BB": 9, "SO": 27, "HR": 4, "AB": 102},
+        {"Player": "Dunmore, Chris", "Team": "CON_RIV", "APP": 6, "GS": 0, "W": 1, "L": 1, "SV": 1,
+         "IP": 13.0, "H": 12, "R": 8, "ER": 7, "BB": 6, "SO": 15, "HR": 2, "AB": 48},
     ]
 
     @st.cache_data(ttl=300, max_entries=3)
