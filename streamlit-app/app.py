@@ -1,4 +1,3 @@
-import returner_board_page
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -754,7 +753,7 @@ def _fcbl_reclassify(combined):
     df["PitchType"] = new_pt
     return df
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)  # v15 — per-game pitcher overrides
+@st.cache_data(show_spinner=False, max_entries=2)  # v15 — per-game pitcher overrides
 def load_data():
     csv_files = list(DATA_DIR.glob("*.csv"))
     if not csv_files:
@@ -918,18 +917,20 @@ for _nc in ["Balls","Strikes","PlateLocSide","PlateLocHeight","ExitSpeed","Angle
     if _nc in df_all.columns:
         df_all[_nc] = pd.to_numeric(df_all[_nc], errors="coerce")
 
-# ── Stuff+ scoring — runs once per data load, before any page renders ────────
-# score_by_pitch_type is @st.cache_data keyed on (row count, columns), so it only
-# retrains when the dataset actually changes (new games + "Reload data"), not on
-# every click. NOTE: an earlier version of this trained on every boot unconditionally
-# and spiked memory on the 1GB hosting instance (health check "connection reset") —
-# the shape-based cache key avoids repeating that.
-try:
-    import stuff_model
-    _stuff_hash = (len(df_all), tuple(df_all.columns))
-    stuff_plus_df = stuff_model.score_by_pitch_type(_stuff_hash, df_all)
-except Exception:
-    stuff_plus_df = pd.DataFrame(columns=["Pitcher", "PitchType", "StuffPlus", "Pitches"])
+# ── Stuff+ scoring — computed lazily, only by the two pages that show it
+# (Pitcher Scouting/Pitcher vs Team, Starters vs Bullpen), instead of on
+# every page load. score_by_pitch_type is itself @st.cache_data keyed on
+# (row count, columns), so it only (re)trains when the dataset actually
+# changes (new games + "Reload data"), not on every click — this wrapper
+# just avoids paying the xgboost/sklearn import + training cost on pages
+# that never use Stuff+ at all.
+def _get_stuff_plus_df():
+    try:
+        import stuff_model
+        _stuff_hash = (len(df_all), tuple(df_all.columns))
+        return stuff_model.score_by_pitch_type(_stuff_hash, df_all)
+    except Exception:
+        return pd.DataFrame(columns=["Pitcher", "PitchType", "StuffPlus", "Pitches"])
 
 # ── Park factors — shared across League Rankings, OPS+ Leaderboard, and
 # Player WAR, all of which used to flag "not park-adjusted" as a known gap.
@@ -940,7 +941,7 @@ except Exception:
 # sample here is too thin (a few dozen fly balls) to trust on its own, so
 # the general runs environment is used as the best available proxy instead
 # of a separate, noisier HR-only park factor. ──
-@st.cache_data(ttl=600, max_entries=2)
+@st.cache_data(max_entries=2)
 def _compute_park_factors(_hash):
     """Returns (game_pf, pf_table): game_pf is {GameID: park_factor} for
     looking up any game's park factor by ID; pf_table is a small per-stadium
@@ -1005,7 +1006,7 @@ _DEMO_OFFICIAL_STATS = [
 ]
 
 
-@st.cache_data(ttl=300, max_entries=3)
+@st.cache_data(max_entries=3)
 def load_official_stats():
     """Load official stats from Presto Sports CSV export if present.
     Accepts flexible column names — maps common variants automatically."""
@@ -1420,7 +1421,7 @@ def attack_zone(side, height):
         return "Chase"
     return "Waste"
 
-@st.cache_data(ttl=600, max_entries=2)
+@st.cache_data(max_entries=2)
 def _league_attack_zone_rates(df, mode):
     """League distribution across attack zones. mode='pitch' = all pitches (for
     pitchers); mode='swing' = swings only (for hitters)."""
@@ -1986,7 +1987,7 @@ def _xwoba_on_contact(ev, la):
         return 0.45
     return 0.18
 
-@st.cache_data(ttl=600, max_entries=3)
+@st.cache_data(max_entries=3)
 def _build_gameplan_pdf(pitcher, throws_lbl, opp, ars_rows, tend_rows, lineup_rows,
                         attack_notes, hand_lbl, logo_path="assets/nashua_logo.png"):
     """Build a branded PDF game plan; returns bytes. Logo used if the file exists."""
@@ -2055,7 +2056,7 @@ def _build_gameplan_pdf(pitcher, throws_lbl, opp, ars_rows, tend_rows, lineup_ro
     return buf.getvalue()
 
 
-@st.cache_data(ttl=600, max_entries=3)
+@st.cache_data(max_entries=3)
 def _build_hitter_scouting_pdf(hitter_name, hand_lbl, pitcher_name, throws_lbl,
                                vs_hand, mix_rows, ab_log,
                                logo_path="assets/nashua_logo.png"):
@@ -3299,6 +3300,7 @@ elif page == "Lineup Builder":
 #  PAGE: RETURNER BOARD (FCBL cross-league bring-back board)
 # ─────────────────────────────────────────
 elif page == "Returner Board":
+    import returner_board_page
     returner_board_page.render(DATA_DIR, EXCLUDED_TEAMS=EXCLUDED_TEAMS,
                                goto_pitcher=_goto_pitcher_scouting,
                                goto_hitter=_goto_batter_analysis,
@@ -4626,7 +4628,8 @@ elif page == "Pitcher Scouting" or page == "Pitcher vs Team":
     games_faced = pp["GameID"].nunique() if "GameID" in pp.columns else "?"
     h4.metric("Games", games_faced)
 
-    # ── Stuff+ by pitch type — computed once at data load, shown up top ──
+    # ── Stuff+ by pitch type — computed lazily here, the only place it's needed ──
+    stuff_plus_df = _get_stuff_plus_df()
     pp_pt = pp[pp["PitchType"].notna() & (pp["PitchType"] != "None")]
     pt_counts = pp_pt.groupby("PitchType").size().reset_index(name="Pitches")
     pitcher_stuff = (stuff_plus_df[stuff_plus_df["Pitcher"] == pitcher]
@@ -7844,7 +7847,7 @@ elif page == "Player WAR":
         {"Player": "Dunmore, Chris", "Team": "CON_RIV", "Position": "IF", "G": 6, "PO": 2, "A": 6, "E": 2, "SB": 0, "CS": 0},
     ]
 
-    @st.cache_data(ttl=300, max_entries=3)
+    @st.cache_data(max_entries=3)
     def _load_official_fielding():
         """Official season fielding + stolen-base stats (Data/
         official_player_fielding_baserunning.csv), transcribed from each
@@ -8071,6 +8074,7 @@ elif page == "Player WAR":
 elif page == "Starters vs Bullpen":
     st.title("Starters vs Bullpen")
     st.caption("The team's cumulative starter stat line vs. its bullpen stat line.")
+    stuff_plus_df = _get_stuff_plus_df()
 
     sb_teams = sorted(_team_options(df_all["PitcherTeam"]))
     sb_team = st.selectbox("Team", options=sb_teams,
@@ -8270,7 +8274,7 @@ elif page == "Starters vs Bullpen":
          "IP": 13.0, "H": 12, "R": 8, "ER": 7, "BB": 6, "SO": 15, "HR": 2, "AB": 48},
     ]
 
-    @st.cache_data(ttl=300, max_entries=3)
+    @st.cache_data(max_entries=3)
     def _load_official_pitching():
         f = DATA_DIR / "official_pitching_season.csv"
         if not f.exists():

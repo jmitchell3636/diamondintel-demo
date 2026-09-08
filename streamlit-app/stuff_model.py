@@ -38,7 +38,7 @@ def _prepare(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)
+@st.cache_data(show_spinner=False, max_entries=2)
 def score_dataframe(df_hash, df: pd.DataFrame):
     """Train OOF XGBoost whiff model and return scored dataframe + fit metadata."""
     df = _prepare(df)
@@ -85,7 +85,7 @@ def score_dataframe(df_hash, df: pd.DataFrame):
                 "whiffs": int(y[swing_mask].sum()), "league_mean": float(league_mean)}
 
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)
+@st.cache_data(show_spinner=False, max_entries=2)
 def score_by_pitch_type(df_hash, df: pd.DataFrame) -> pd.DataFrame:
     """Stuff+ per pitcher x pitch type (100 = league average), for display elsewhere in the app."""
     scored, _meta = score_dataframe(df_hash, df)

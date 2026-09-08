@@ -201,7 +201,7 @@ def build_training_frame(df):
     return d
 
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)
+@st.cache_data(show_spinner=False, max_entries=2)
 def train_whiff_model(df_hash, df):
     """Train the global whiff-probability model with out-of-fold GroupKFold
     (grouped by Pitcher, same leakage rationale as stuff_model.py). Returns
@@ -335,7 +335,7 @@ def _pa_ordered(df):
     return d[d["prior_type"].notna()]
 
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)
+@st.cache_data(show_spinner=False, max_entries=2)
 def sequence_transition_table(df_hash, df, min_n=20):
     """League-wide whiff-rate lift by (prior pitch type, prior zone, next pitch
     type, same-hand), shrunk toward the same-hand/pitch-type baseline. Returns a
@@ -393,7 +393,7 @@ def sequence_lift(league_table, hitter_table, prior_type, prior_az, next_type, s
     return float(np.clip(ratio, 0.6, 1.6)), lg["n"]
 
 
-@st.cache_data(ttl=600, show_spinner=False, max_entries=2)
+@st.cache_data(show_spinner=False, max_entries=2)
 def league_zone_swing_rates(df_hash, df):
     """League swing-rate by (zone bucket, same-hand) — the comparison baseline
     for hitter_zone_discipline. Cached separately since it's a full-league scan
