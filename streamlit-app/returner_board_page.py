@@ -203,7 +203,7 @@ def _number_format(df):
             for c in df.select_dtypes(include="number").columns}
 
 
-@st.cache_data(ttl=600, show_spinner="Aggregating TrackMan pitch data...")
+@st.cache_data(show_spinner="Aggregating TrackMan pitch data...")
 def _load_halves(data_dir):
     return load_trackman(str(data_dir))
 
