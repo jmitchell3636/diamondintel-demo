@@ -1421,23 +1421,40 @@ def attack_zone(side, height):
         return "Chase"
     return "Waste"
 
-@st.cache_data(max_entries=2)
-def _league_attack_zone_rates(df, mode):
-    """League distribution across attack zones. mode='pitch' = all pitches (for
-    pitchers); mode='swing' = swings only (for hitters)."""
-    d = df.copy()
+def attack_zone_series(side, height):
+    """Vectorized attack_zone: Series of Heart/Shadow/Chase/Waste (NaN where
+    location is missing). Same cutoffs as attack_zone()."""
+    dx = side.abs() / _AZ_HW
+    dy = (height - _AZ_CH).abs() / _AZ_HH
+    d = np.maximum(dx, dy)
+    z = pd.Series(np.select([d <= 0.55, d <= 1.33, d <= 2.0],
+                            ["Heart", "Shadow", "Chase"], default="Waste"),
+                  index=side.index, dtype=object)
+    return z.where(side.notna() & height.notna())
+
+
+@st.cache_data(ttl=600, max_entries=2, show_spinner=False)
+def _league_attack_zone_rates_cached(_df, n, mode):
+    # _df is underscore-prefixed so Streamlit does not hash the whole frame on
+    # every call; n (row count) invalidates the cache when the data changes.
+    d = _df[["PlateLocSide", "PlateLocHeight", "PitchCall"]].copy()
     d["PlateLocSide"] = pd.to_numeric(d["PlateLocSide"], errors="coerce")
     d["PlateLocHeight"] = pd.to_numeric(d["PlateLocHeight"], errors="coerce")
     if mode == "swing":
         d = d[d["PitchCall"].isin(["StrikeSwinging", "FoulBallNotFieldable",
                                    "FoulBallFieldable", "InPlay"])]
     d = d.dropna(subset=["PlateLocSide", "PlateLocHeight"])
-    z = d.apply(lambda r: attack_zone(r["PlateLocSide"], r["PlateLocHeight"]), axis=1)
-    z = z.dropna()
+    z = attack_zone_series(d["PlateLocSide"], d["PlateLocHeight"]).dropna()
     if len(z) == 0:
         return {k: 0.0 for k in _AZ_ORDER}
     vc = z.value_counts(normalize=True)
     return {k: float(vc.get(k, 0.0)) * 100 for k in _AZ_ORDER}
+
+
+def _league_attack_zone_rates(df, mode):
+    """League distribution across attack zones. mode='pitch' = all pitches (for
+    pitchers); mode='swing' = swings only (for hitters)."""
+    return _league_attack_zone_rates_cached(df, len(df), mode)
 
 
 def _attack_zone(side, h):
@@ -2931,7 +2948,7 @@ if page == "Batter Analysis":
                                            "FoulBallFieldable", "InPlay"])].copy()
     _sw["PlateLocSide"] = pd.to_numeric(_sw["PlateLocSide"], errors="coerce")
     _sw["PlateLocHeight"] = pd.to_numeric(_sw["PlateLocHeight"], errors="coerce")
-    _sw["_z"] = _sw.apply(lambda r: attack_zone(r["PlateLocSide"], r["PlateLocHeight"]), axis=1)
+    _sw["_z"] = attack_zone_series(_sw["PlateLocSide"], _sw["PlateLocHeight"])
     _sw_valid = _sw.dropna(subset=["_z"])
     if len(_sw_valid) >= 8:
         _lgs = _league_attack_zone_rates(df_all, "swing")
@@ -4769,7 +4786,7 @@ elif page == "Pitcher Scouting" or page == "Pitcher vs Team":
         _pz = pp_clean.copy()
         _pz["PlateLocSide"] = pd.to_numeric(_pz["PlateLocSide"], errors="coerce")
         _pz["PlateLocHeight"] = pd.to_numeric(_pz["PlateLocHeight"], errors="coerce")
-        _pz["_z"] = _pz.apply(lambda r: attack_zone(r["PlateLocSide"], r["PlateLocHeight"]), axis=1)
+        _pz["_z"] = attack_zone_series(_pz["PlateLocSide"], _pz["PlateLocHeight"])
         _pz_valid = _pz.dropna(subset=["_z"])
         if len(_pz_valid) >= 10:
             _lg = _league_attack_zone_rates(df_all, "pitch")
